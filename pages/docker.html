@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Docker</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Docker</h1>
+            <p class="subtitle">Контейнеризация — ключевая технология современного DevOps</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Что такое контейнеры и зачем они нужны</h2>
+
+                <p>Контейнер — это легковесная, изолированная среда выполнения, которая содержит приложение и все его зависимости: библиотеки, системные утилиты, конфигурационные файлы и среду исполнения. В отличие от виртуальных машин, контейнеры не включают полноценную операционную систему с собственным ядром — вместо этого они разделяют ядро хостовой ОС, используя механизмы изоляции Linux: namespaces (изоляция процессов, сети, файловой системы) и cgroups (ограничение ресурсов — CPU, память, I/O). Это делает контейнеры значительно легче виртуальных машин: они запускаются за секунды, потребляют минимум ресурсов и позволяют запускать десятки экземпляров на одном хосте.</p>
+
+                <p>Принципиальное отличие контейнеров от виртуальных машин можно представить следующим образом. Виртуальная машина эмулирует полноценный компьютер: у неё свой виртуальный процессор, своя оперативная память, свой диск и, главное, своя операционная система с собственным ядром. Гипервизор (VMware, VirtualBox, KVM) управляет аппаратными ресурсами и распределяет их между VM. Контейнер же работает поверх одного общего ядра Linux — он изолирует только пространство имён процессов, сетевой стек и файловую систему. Поэтому образ контейнера весит мегабайты (а не гигабайты, как у VM), запускается мгновенно и потребляет ресурсы только на само приложение, без накладных расходов на гостевую ОС.</p>
+
+                <p>Docker стал стандартом де-факто в мире контейнеризации, хотя сама идея контейнеров появилась задолго до него — через chroot (1979), FreeBSD Jails (2000), Linux-VServer, OpenVZ и LXC. Заслуга Docker (2013) в том, что он предложил удобный интерфейс, систему образов с послойным хранением и экосистему Docker Hub для обмена образами. Сегодня контейнерный ландшафт стандартизирован через OCI (Open Container Initiative), который определяет спецификации для форматов образов и runtime. Docker Engine состоит из трёх компонентов: Docker CLI (клиент, принимающий команды пользователя), Docker Daemon (dockerd — серверный процесс, управляющий контейнерами) и containerd (низкоуровневый runtime, который фактически создаёт и запускает контейнеры через runc). Такая архитектура позволяет заменять отдельные компоненты: например, Kubernetes использует containerd напрямую, без Docker Daemon.</p>
+            </div>
+
+            <!-- ===== ОБРАЗЫ И КОНТЕЙНЕРЫ ===== -->
+            <div class="section">
+                <div class="section-label">Основы</div>
+                <h2>Образы и контейнеры</h2>
+
+                <p>Образ (image) — это неизменяемый (read-only) шаблон, содержащий файловую систему приложения: операционную систему, установленные пакеты, код приложения, конфигурации и метаданные (точка входа, переменные окружения, открытые порты). Образ состоит из слоёв (layers), каждый из которых представляет собой набор изменений файловой системы относительно предыдущего слоя. Например, базовый слой — это минимальная ОС (Ubuntu, Alpine), следующий слой — установленные пакеты, затем — скопированный код приложения. Слои хранятся с использованием Union Filesystem (OverlayFS в современных версиях Docker), что позволяет эффективно переиспользовать общие слои между разными образами и экономить дисковое пространство.</p>
+
+                <p>Контейнер (container) — это запущенный экземпляр образа. Когда вы запускаете контейнер, Docker берёт все read-only слои образа и добавляет поверх них один тонкий записываемый (writable) слой — именно в него попадают все изменения, которые приложение вносит во время работы: создание файлов, запись логов, модификация конфигураций. Это называется стратегией Copy-on-Write (CoW): если контейнер хочет изменить файл из нижнего слоя, файл сначала копируется в верхний записываемый слой, и изменения применяются уже к копии. Когда контейнер удаляется, записываемый слой уничтожается, а образ остаётся нетронутым. Это обеспечивает воспроизводимость: из одного образа можно создать сколько угодно контейнеров, и каждый будет стартовать с идентичного состояния.</p>
+
+                <p>Именование образов следует стандартной схеме: <code>registry/repository:tag</code>. Например, <code>docker.io/library/nginx:1.25-alpine</code> — это образ Nginx версии 1.25 на базе Alpine Linux из официального реестра Docker Hub. Если реестр не указан, Docker по умолчанию обращается к Docker Hub (<code>docker.io</code>). Если тег не указан, используется <code>:latest</code>, что считается плохой практикой в production, так как <code>latest</code> может указывать на разные версии в разные моменты времени. Docker Hub — это публичный реестр образов, содержащий как официальные образы (nginx, postgres, node), так и пользовательские. Для приватного хранения используют Docker Registry, GitHub Container Registry (ghcr.io), Amazon ECR, Google Artifact Registry и другие.</p>
+            </div>
+
+            <!-- ===== DOCKERFILE ===== -->
+            <div class="section">
+                <div class="section-label">Создание образов</div>
+                <h2>Dockerfile</h2>
+
+                <p>Dockerfile — это текстовый файл с инструкциями для сборки Docker-образа. Каждая инструкция создаёт новый слой в образе. Docker выполняет инструкции последовательно, сверху вниз, и кеширует каждый слой: если инструкция и её контекст не изменились с прошлой сборки, Docker использует закешированный слой, что значительно ускоряет повторные сборки. Понимание слоёв и кеширования — ключ к написанию эффективных Dockerfile. Правило простое: инструкции, которые редко меняются (установка зависимостей ОС), размещайте вверху, а часто меняющиеся (копирование кода приложения) — внизу.</p>
+
+                <p>Контекст сборки (build context) — это директория, которую Docker отправляет демону для выполнения инструкций <code>COPY</code> и <code>ADD</code>. По умолчанию это текущая директория, из которой вызывается <code>docker build</code>. Все файлы в контексте отправляются демону, поэтому важно не включать туда ненужные файлы (node_modules, .git, временные файлы). Для этого создаётся файл <code>.dockerignore</code>, который работает аналогично <code>.gitignore</code> и исключает файлы из контекста сборки.</p>
+
+                <p>Рассмотрим каждую инструкцию Dockerfile подробно:</p>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>FROM</h3>
+                        <p>Задаёт базовый образ, от которого начинается сборка. Каждый Dockerfile обязан начинаться с <code>FROM</code> (за исключением <code>ARG</code> перед ним). Выбор базового образа критически влияет на размер итогового образа и его безопасность. Популярные варианты: <code>ubuntu:22.04</code> (~77 МБ), <code>debian:bookworm-slim</code> (~74 МБ), <code>alpine:3.19</code> (~7 МБ), <code>scratch</code> (пустой образ для статически скомпилированных бинарников).</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>RUN</h3>
+                        <p>Выполняет команду внутри контейнера во время сборки и фиксирует результат в новый слой. Используется для установки пакетов, компиляции кода, создания директорий. Хорошая практика — объединять связанные команды в одну инструкцию <code>RUN</code> через <code>&amp;&amp;</code>, чтобы минимизировать количество слоёв и удалять кеш менеджера пакетов в той же инструкции.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>COPY и ADD</h3>
+                        <p><code>COPY</code> копирует файлы из контекста сборки в образ. <code>ADD</code> делает то же самое, но дополнительно умеет распаковывать архивы (.tar, .gz) и скачивать файлы по URL. Рекомендуется использовать <code>COPY</code> в большинстве случаев, так как его поведение более предсказуемо. <code>ADD</code> стоит использовать только когда вам действительно нужна автоматическая распаковка архивов.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>WORKDIR</h3>
+                        <p>Устанавливает рабочую директорию для последующих инструкций <code>RUN</code>, <code>CMD</code>, <code>ENTRYPOINT</code>, <code>COPY</code> и <code>ADD</code>. Если директория не существует, Docker создаст её автоматически. Используйте <code>WORKDIR</code> вместо <code>RUN cd /app</code> — это более явно и не зависит от контекста предыдущих слоёв.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>ENV и ARG</h3>
+                        <p><code>ENV</code> задаёт переменные окружения, которые доступны как во время сборки, так и при запуске контейнера. <code>ARG</code> задаёт переменные, доступные только во время сборки (через <code>--build-arg</code>). Типичное использование: <code>ARG</code> для версии приложения или URL-адреса зависимости, <code>ENV</code> для настроек runtime (порт, режим работы).</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>EXPOSE</h3>
+                        <p>Документирует порт, который контейнер будет слушать во время работы. Эта инструкция не открывает порт реально — она служит метаданными для документации и для автоматических инструментов. Фактическое проброс портов выполняется при запуске через <code>docker run -p</code>.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>USER</h3>
+                        <p>Переключает пользователя, от имени которого будут выполняться последующие инструкции и запускаться контейнер. По умолчанию всё выполняется от root, что является риском безопасности. Хорошая практика — создать непривилегированного пользователя и переключиться на него перед <code>CMD</code>.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>CMD и ENTRYPOINT</h3>
+                        <p><code>CMD</code> задаёт команду по умолчанию, которая выполняется при запуске контейнера. Её можно переопределить, указав другую команду в <code>docker run</code>. <code>ENTRYPOINT</code> задаёт основную команду, которую нельзя переопределить через <code>docker run</code> (только через <code>--entrypoint</code>). Типичный паттерн: <code>ENTRYPOINT</code> задаёт исполняемый файл, а <code>CMD</code> — аргументы по умолчанию. Например, <code>ENTRYPOINT ["python"]</code> и <code>CMD ["app.py"]</code> — при запуске <code>docker run myapp test.py</code> будет выполнено <code>python test.py</code>.</p>
+                    </div>
+                </div>
+
+                <p>Пример полноценного Dockerfile для Python-приложения:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile</div>
+<pre>
+<span class="kw">FROM</span> python:3.12-slim
+
+<span class="cm"># Аргументы сборки</span>
+<span class="kw">ARG</span> APP_VERSION=1.0.0
+
+<span class="cm"># Переменные окружения</span>
+<span class="kw">ENV</span> PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    APP_VERSION=${APP_VERSION}
+
+<span class="cm"># Системные зависимости</span>
+<span class="kw">RUN</span> apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+<span class="cm"># Рабочая директория</span>
+<span class="kw">WORKDIR</span> /app
+
+<span class="cm"># Сначала копируем только файл зависимостей (для кеширования)</span>
+<span class="kw">COPY</span> requirements.txt .
+<span class="kw">RUN</span> pip install --no-cache-dir -r requirements.txt
+
+<span class="cm"># Затем копируем код приложения</span>
+<span class="kw">COPY</span> . .
+
+<span class="cm"># Непривилегированный пользователь</span>
+<span class="kw">RUN</span> adduser --disabled-password --no-create-home appuser
+<span class="kw">USER</span> appuser
+
+<span class="cm"># Документация порта</span>
+<span class="kw">EXPOSE</span> 8000
+
+<span class="cm"># Точка входа</span>
+<span class="kw">CMD</span> [<span class="st">"uvicorn"</span>, <span class="st">"main:app"</span>, <span class="st">"--host"</span>, <span class="st">"0.0.0.0"</span>, <span class="st">"--port"</span>, <span class="st">"8000"</span>]
+</pre>
+                </div>
+
+                <p>Файл <code>.dockerignore</code> для этого проекта:</p>
+
+                <div class="code-block">
+                    <div class="code-header">.dockerignore</div>
+<pre>
+.git
+.gitignore
+__pycache__
+*.pyc
+.env
+.venv
+venv
+node_modules
+Dockerfile
+docker-compose.yml
+*.md
+.mypy_cache
+.pytest_cache
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== MULTI-STAGE BUILDS ===== -->
+            <div class="section">
+                <div class="section-label">Оптимизация</div>
+                <h2>Multi-stage builds</h2>
+
+                <p>Multi-stage builds (многоступенчатые сборки) — это техника, при которой Dockerfile содержит несколько инструкций <code>FROM</code>, каждая из которых начинает новый этап сборки. Главная цель — отделить среду сборки от среды выполнения. На этапе сборки вам нужны компиляторы, SDK, инструменты для тестирования — всё это может занимать сотни мегабайт. Но в финальном образе, который будет запущен в production, нужен только скомпилированный бинарник или собранные артефакты. Multi-stage позволяет скопировать из одного этапа в другой только нужные файлы, радикально уменьшая размер итогового образа.</p>
+
+                <p>Помимо уменьшения размера, multi-stage builds повышают безопасность: в финальном образе нет компиляторов, исходного кода, dev-зависимостей и инструментов отладки, которые могут быть использованы злоумышленником. Это следует принципу минимальной поверхности атаки. Каждый этап имеет свой собственный набор слоёв, и промежуточные этапы не включаются в финальный образ — Docker сохраняет только слои последнего этапа <code>FROM</code>.</p>
+
+                <p>Рассмотрим полный пример multi-stage для Go-приложения:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile — Multi-stage для Go</div>
+<pre>
+<span class="cm"># === Этап 1: Сборка ===</span>
+<span class="kw">FROM</span> golang:1.22-alpine <span class="kw">AS</span> builder
+
+<span class="kw">WORKDIR</span> /src
+
+<span class="cm"># Кешируем зависимости</span>
+<span class="kw">COPY</span> go.mod go.sum ./
+<span class="kw">RUN</span> go mod download
+
+<span class="cm"># Копируем код и собираем статический бинарник</span>
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./cmd/server
+
+<span class="cm"># === Этап 2: Финальный образ ===</span>
+<span class="kw">FROM</span> scratch
+
+<span class="cm"># Копируем SSL-сертификаты для HTTPS-запросов</span>
+<span class="kw">COPY</span> --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+<span class="cm"># Копируем только бинарник из этапа сборки</span>
+<span class="kw">COPY</span> --from=builder /app/server /server
+
+<span class="kw">EXPOSE</span> 8080
+<span class="kw">ENTRYPOINT</span> [<span class="st">"/server"</span>]
+</pre>
+                </div>
+
+                <p>Аналогичный пример для Node.js-приложения:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile — Multi-stage для Node.js</div>
+<pre>
+<span class="cm"># === Этап 1: Установка зависимостей и сборка ===</span>
+<span class="kw">FROM</span> node:20-alpine <span class="kw">AS</span> builder
+
+<span class="kw">WORKDIR</span> /app
+
+<span class="kw">COPY</span> package.json package-lock.json ./
+<span class="kw">RUN</span> npm ci --only=production
+
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> npm run build
+
+<span class="cm"># === Этап 2: Финальный образ ===</span>
+<span class="kw">FROM</span> node:20-alpine
+
+<span class="kw">WORKDIR</span> /app
+
+<span class="cm"># Копируем только production-зависимости и собранный код</span>
+<span class="kw">COPY</span> --from=builder /app/node_modules ./node_modules
+<span class="kw">COPY</span> --from=builder /app/dist ./dist
+<span class="kw">COPY</span> --from=builder /app/package.json .
+
+<span class="kw">RUN</span> addgroup -S appgroup && adduser -S appuser -G appgroup
+<span class="kw">USER</span> appuser
+
+<span class="kw">EXPOSE</span> 3000
+<span class="kw">CMD</span> [<span class="st">"node"</span>, <span class="st">"dist/index.js"</span>]
+</pre>
+                </div>
+
+                <div class="note">
+                    <strong>Сравнение размеров образов:</strong> Go-приложение без multi-stage (golang:1.22-alpine + бинарник) весит ~300 МБ. С multi-stage (scratch + бинарник) — около 10-15 МБ. Node.js-приложение без оптимизации — ~1 ГБ, с multi-stage — ~150-200 МБ. Разница в десятки раз влияет на скорость деплоя, скачивания образов и стоимость хранения в реестре.
+                </div>
+            </div>
+
+            <!-- ===== ОСНОВНЫЕ КОМАНДЫ ===== -->
+            <div class="section">
+                <div class="section-label">Работа с Docker</div>
+                <h2>Основные команды Docker</h2>
+
+                <p>Docker CLI — основной инструмент взаимодействия с Docker Engine. Команды логически группируются: управление образами (<code>docker image</code>), контейнерами (<code>docker container</code>), сетями (<code>docker network</code>), томами (<code>docker volume</code>). Хотя существуют сокращённые формы (например, <code>docker ps</code> вместо <code>docker container ls</code>), рекомендуется знать обе формы. Ниже приведены наиболее важные команды с подробным описанием флагов.</p>
+
+                <h3>Сборка образов</h3>
+
+                <div class="code-block">
+                    <div class="code-header">docker build</div>
+<pre>
+<span class="cm"># Базовая сборка из текущей директории</span>
+<span class="fn">docker</span> build <span class="fl">-t</span> myapp:1.0 .
+
+<span class="cm"># С указанием Dockerfile и build-arg</span>
+<span class="fn">docker</span> build <span class="fl">-f</span> Dockerfile.prod <span class="fl">-t</span> myapp:prod <span class="fl">--build-arg</span> <span class="st">APP_ENV=production</span> .
+
+<span class="cm"># Без использования кеша</span>
+<span class="fn">docker</span> build <span class="fl">--no-cache</span> <span class="fl">-t</span> myapp:fresh .
+
+<span class="cm"># Сборка для конкретной платформы</span>
+<span class="fn">docker</span> build <span class="fl">--platform</span> linux/amd64 <span class="fl">-t</span> myapp:amd64 .
+</pre>
+                </div>
+
+                <h3>Запуск контейнеров</h3>
+
+                <div class="code-block">
+                    <div class="code-header">docker run</div>
+<pre>
+<span class="cm"># Базовый запуск</span>
+<span class="fn">docker</span> run nginx
+
+<span class="cm"># Запуск в фоновом режиме (-d = detached)</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">--name</span> web nginx
+
+<span class="cm"># Проброс портов: хост:контейнер</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">-p</span> 8080:80 nginx
+
+<span class="cm"># Монтирование тома</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">-v</span> mydata:/var/lib/postgresql/data postgres
+
+<span class="cm"># Переменные окружения</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">-e</span> <span class="st">POSTGRES_PASSWORD=secret</span> <span class="fl">-e</span> <span class="st">POSTGRES_DB=mydb</span> postgres
+
+<span class="cm"># Интерактивный режим с TTY (-it) и автоудаление (--rm)</span>
+<span class="fn">docker</span> run <span class="fl">-it</span> <span class="fl">--rm</span> ubuntu bash
+
+<span class="cm"># Полный пример: имя, порты, тома, env, сеть</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> \
+  <span class="fl">--name</span> api-server \
+  <span class="fl">-p</span> 3000:3000 \
+  <span class="fl">-v</span> ./config:/app/config:ro \
+  <span class="fl">-e</span> <span class="st">NODE_ENV=production</span> \
+  <span class="fl">--network</span> backend \
+  <span class="fl">--restart</span> unless-stopped \
+  myapp:1.0
+</pre>
+                </div>
+
+                <h3>Управление контейнерами</h3>
+
+                <div class="code-block">
+                    <div class="code-header">Жизненный цикл контейнера</div>
+<pre>
+<span class="cm"># Список запущенных контейнеров</span>
+<span class="fn">docker</span> ps
+
+<span class="cm"># Все контейнеры (включая остановленные)</span>
+<span class="fn">docker</span> ps <span class="fl">-a</span>
+
+<span class="cm"># Логи контейнера (с follow и timestamp)</span>
+<span class="fn">docker</span> logs <span class="fl">-f</span> <span class="fl">--tail</span> 100 <span class="fl">-t</span> web
+
+<span class="cm"># Выполнить команду внутри запущенного контейнера</span>
+<span class="fn">docker</span> exec <span class="fl">-it</span> web bash
+<span class="fn">docker</span> exec web cat /etc/nginx/nginx.conf
+
+<span class="cm"># Остановить и удалить</span>
+<span class="fn">docker</span> stop web
+<span class="fn">docker</span> rm web
+
+<span class="cm"># Остановить и удалить одной командой</span>
+<span class="fn">docker</span> rm <span class="fl">-f</span> web
+
+<span class="cm"># Информация о контейнере</span>
+<span class="fn">docker</span> inspect web
+</pre>
+                </div>
+
+                <h3>Управление образами</h3>
+
+                <div class="code-block">
+                    <div class="code-header">Образы</div>
+<pre>
+<span class="cm"># Список локальных образов</span>
+<span class="fn">docker</span> images
+
+<span class="cm"># Скачать образ из реестра</span>
+<span class="fn">docker</span> pull nginx:1.25-alpine
+
+<span class="cm"># Загрузить образ в реестр</span>
+<span class="fn">docker</span> push myregistry.io/myapp:1.0
+
+<span class="cm"># Удалить образ</span>
+<span class="fn">docker</span> rmi nginx:1.25-alpine
+
+<span class="cm"># Очистка: удалить всё неиспользуемое</span>
+<span class="fn">docker</span> system prune <span class="fl">-a</span> <span class="fl">--volumes</span>
+</pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Флаг</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>-d</code></td><td>Detached — запуск в фоновом режиме</td></tr>
+                            <tr><td><code>-p 8080:80</code></td><td>Проброс порта хоста 8080 на порт 80 контейнера</td></tr>
+                            <tr><td><code>-v name:/path</code></td><td>Монтирование именованного тома</td></tr>
+                            <tr><td><code>--name</code></td><td>Присвоение имени контейнеру</td></tr>
+                            <tr><td><code>-e KEY=VAL</code></td><td>Установка переменной окружения</td></tr>
+                            <tr><td><code>--rm</code></td><td>Автоматическое удаление контейнера при остановке</td></tr>
+                            <tr><td><code>-it</code></td><td>Интерактивный режим с псевдо-TTY</td></tr>
+                            <tr><td><code>--network</code></td><td>Подключение к указанной Docker-сети</td></tr>
+                            <tr><td><code>--restart</code></td><td>Политика перезапуска: no, always, unless-stopped, on-failure</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== СЕТИ ===== -->
+            <div class="section">
+                <div class="section-label">Сеть</div>
+                <h2>Сети в Docker</h2>
+
+                <p>Docker предоставляет собственную сетевую подсистему, которая позволяет контейнерам взаимодействовать друг с другом и с внешним миром. Каждый контейнер при запуске получает собственный сетевой namespace с виртуальным интерфейсом, IP-адресом и таблицей маршрутизации. Docker поддерживает несколько драйверов сети, каждый из которых подходит для разных сценариев. Выбор правильного драйвера влияет на производительность, изоляцию и доступность контейнеров.</p>
+
+                <p>По умолчанию Docker создаёт три сети: <code>bridge</code>, <code>host</code> и <code>none</code>. Сеть <strong>bridge</strong> — это стандартная сеть для автономных контейнеров. Docker создаёт виртуальный мост (<code>docker0</code>), к которому подключаются контейнеры. Контейнеры в одной bridge-сети могут обращаться друг к другу по IP-адресу, а в пользовательских bridge-сетях — ещё и по имени контейнера благодаря встроенному DNS-серверу Docker. Сеть <strong>host</strong> убирает сетевую изоляцию: контейнер напрямую использует сетевой стек хоста. Это даёт максимальную производительность (нет NAT-трансляции), но теряется изоляция — контейнер может конфликтовать с портами хоста. Сеть <strong>none</strong> полностью отключает сетевой стек — контейнер доступен только через <code>docker exec</code>. Сеть <strong>overlay</strong> используется в Docker Swarm и Kubernetes для связи контейнеров на разных хостах через VXLAN-туннели.</p>
+
+                <p>Хорошей практикой считается создание отдельных пользовательских сетей для каждого проекта. Это обеспечивает изоляцию между проектами и включает автоматический DNS (контейнеры могут обращаться друг к другу по имени). Проброс портов (port mapping) через флаг <code>-p</code> создаёт правила iptables, перенаправляющие трафик с порта хоста на порт контейнера.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с сетями</div>
+<pre>
+<span class="cm"># Создать пользовательскую сеть</span>
+<span class="fn">docker</span> network create backend
+
+<span class="cm"># Создать сеть с указанием подсети</span>
+<span class="fn">docker</span> network create <span class="fl">--subnet</span> 172.20.0.0/16 my-network
+
+<span class="cm"># Список сетей</span>
+<span class="fn">docker</span> network ls
+
+<span class="cm"># Информация о сети (подключённые контейнеры, подсеть)</span>
+<span class="fn">docker</span> network inspect backend
+
+<span class="cm"># Запустить контейнеры в одной сети</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">--name</span> db <span class="fl">--network</span> backend postgres
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">--name</span> api <span class="fl">--network</span> backend <span class="fl">-p</span> 3000:3000 myapp
+
+<span class="cm"># Теперь api может обращаться к postgres по имени: db:5432</span>
+
+<span class="cm"># Подключить контейнер к дополнительной сети</span>
+<span class="fn">docker</span> network connect frontend api
+
+<span class="cm"># Удалить сеть</span>
+<span class="fn">docker</span> network rm backend
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== VOLUMES ===== -->
+            <div class="section">
+                <div class="section-label">Данные</div>
+                <h2>Volumes и данные</h2>
+
+                <p>По умолчанию все данные, созданные внутри контейнера, хранятся в его записываемом слое и теряются при удалении контейнера. Для сохранения данных между перезапусками Docker предлагает три механизма: volumes (тома), bind mounts (привязки) и tmpfs mounts (монтирование в оперативную память). Каждый тип решает свою задачу, и выбор между ними зависит от требований к производительности, переносимости и управляемости данных.</p>
+
+                <p><strong>Volumes (тома)</strong> — рекомендованный Docker способ хранения данных. Тома управляются самим Docker и хранятся в специальной директории на хосте (<code>/var/lib/docker/volumes/</code>). Они независимы от жизненного цикла контейнера, могут быть подключены к нескольким контейнерам одновременно и поддерживают различные драйверы (локальные, NFS, облачные). <strong>Bind mounts</strong> монтируют конкретную директорию хоста в контейнер. Они полезны для разработки (монтирование исходного кода), но менее переносимы, так как зависят от структуры файловой системы хоста. <strong>tmpfs mounts</strong> хранят данные в оперативной памяти хоста и никогда не записывают их на диск — подходят для временных конфиденциальных данных (секреты, токены).</p>
+
+                <p>Именованные тома (named volumes) имеют явное имя и управляются через <code>docker volume</code>. Анонимные тома создаются автоматически, когда Dockerfile содержит инструкцию <code>VOLUME</code> или контейнер запускается с <code>-v /path</code> без указания имени — они получают случайный хеш в качестве имени и сложны в управлении. В production всегда используйте именованные тома.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с томами</div>
+<pre>
+<span class="cm"># Создать именованный том</span>
+<span class="fn">docker</span> volume create pgdata
+
+<span class="cm"># Список томов</span>
+<span class="fn">docker</span> volume ls
+
+<span class="cm"># Информация о томе (точка монтирования на хосте)</span>
+<span class="fn">docker</span> volume inspect pgdata
+
+<span class="cm"># Запуск с именованным томом</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">--name</span> db \
+  <span class="fl">-v</span> pgdata:/var/lib/postgresql/data \
+  <span class="fl">-e</span> <span class="st">POSTGRES_PASSWORD=secret</span> \
+  postgres:16
+
+<span class="cm"># Bind mount: текущая директория -> /app (для разработки)</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">-v</span> $(pwd)/src:/app/src:ro myapp
+
+<span class="cm"># tmpfs mount (данные только в RAM)</span>
+<span class="fn">docker</span> run <span class="fl">-d</span> <span class="fl">--tmpfs</span> /tmp:size=100m myapp
+
+<span class="cm"># Удалить неиспользуемые тома</span>
+<span class="fn">docker</span> volume prune
+
+<span class="cm"># Удалить конкретный том</span>
+<span class="fn">docker</span> volume rm pgdata
+</pre>
+                </div>
+
+                <div class="note">
+                    <strong>Read-only монтирование:</strong> Используйте суффикс <code>:ro</code> для монтирования в режиме только чтения (<code>-v ./config:/app/config:ro</code>). Это защищает данные хоста от случайных изменений контейнером и является хорошей практикой безопасности.
+                </div>
+            </div>
+
+            <!-- ===== DOCKER COMPOSE ===== -->
+            <div class="section">
+                <div class="section-label">Оркестрация</div>
+                <h2>Docker Compose</h2>
+
+                <p>Docker Compose — инструмент для определения и запуска многоконтейнерных приложений. Вместо того чтобы запускать каждый контейнер отдельной командой <code>docker run</code> с десятком флагов, вы описываете всю инфраструктуру в YAML-файле <code>docker-compose.yml</code> (или <code>compose.yaml</code>) и запускаете одной командой <code>docker compose up</code>. Compose автоматически создаёт сеть для всех сервисов проекта, управляет порядком запуска, монтирует тома и настраивает переменные окружения. Это незаменимый инструмент для локальной разработки и тестирования.</p>
+
+                <p>Файл <code>docker-compose.yml</code> описывает сервисы (services), сети (networks) и тома (volumes). Каждый сервис — это контейнер с определённой конфигурацией. Ключевые параметры сервиса: <code>image</code> или <code>build</code> (откуда взять образ), <code>ports</code> (проброс портов), <code>volumes</code> (монтирование данных), <code>environment</code> (переменные окружения), <code>depends_on</code> (зависимости между сервисами), <code>networks</code> (подключение к сетям), <code>restart</code> (политика перезапуска). Параметр <code>depends_on</code> управляет порядком запуска, но не ждёт готовности сервиса — для этого используют healthcheck или скрипты вроде <code>wait-for-it.sh</code>.</p>
+
+                <p>Рассмотрим полный пример: веб-приложение на Python с PostgreSQL и Redis.</p>
+
+                <div class="code-block">
+                    <div class="code-header">docker-compose.yml</div>
+<pre>
+<span class="kw">version</span>: <span class="st">"3.9"</span>
+
+<span class="kw">services</span>:
+  <span class="fn">app</span>:
+    <span class="kw">build</span>:
+      <span class="kw">context</span>: .
+      <span class="kw">dockerfile</span>: Dockerfile
+    <span class="kw">ports</span>:
+      - <span class="st">"8000:8000"</span>
+    <span class="kw">volumes</span>:
+      - ./src:/app/src       <span class="cm"># bind mount для hot-reload</span>
+    <span class="kw">environment</span>:
+      - <span class="st">DATABASE_URL=postgresql://user:pass@db:5432/mydb</span>
+      - <span class="st">REDIS_URL=redis://cache:6379/0</span>
+      - <span class="st">DEBUG=true</span>
+    <span class="kw">depends_on</span>:
+      db:
+        <span class="kw">condition</span>: service_healthy
+      cache:
+        <span class="kw">condition</span>: service_started
+    <span class="kw">networks</span>:
+      - backend
+    <span class="kw">restart</span>: unless-stopped
+
+  <span class="fn">db</span>:
+    <span class="kw">image</span>: postgres:16-alpine
+    <span class="kw">volumes</span>:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    <span class="kw">environment</span>:
+      - <span class="st">POSTGRES_USER=user</span>
+      - <span class="st">POSTGRES_PASSWORD=pass</span>
+      - <span class="st">POSTGRES_DB=mydb</span>
+    <span class="kw">ports</span>:
+      - <span class="st">"5432:5432"</span>
+    <span class="kw">healthcheck</span>:
+      <span class="kw">test</span>: [<span class="st">"CMD-SHELL"</span>, <span class="st">"pg_isready -U user -d mydb"</span>]
+      <span class="kw">interval</span>: 5s
+      <span class="kw">timeout</span>: 5s
+      <span class="kw">retries</span>: 5
+    <span class="kw">networks</span>:
+      - backend
+
+  <span class="fn">cache</span>:
+    <span class="kw">image</span>: redis:7-alpine
+    <span class="kw">ports</span>:
+      - <span class="st">"6379:6379"</span>
+    <span class="kw">volumes</span>:
+      - redisdata:/data
+    <span class="kw">networks</span>:
+      - backend
+
+<span class="kw">volumes</span>:
+  pgdata:
+  redisdata:
+
+<span class="kw">networks</span>:
+  backend:
+    <span class="kw">driver</span>: bridge
+</pre>
+                </div>
+
+                <h3>Команды Docker Compose</h3>
+
+                <div class="code-block">
+                    <div class="code-header">docker compose</div>
+<pre>
+<span class="cm"># Запуск всех сервисов (в фоне)</span>
+<span class="fn">docker</span> compose up <span class="fl">-d</span>
+
+<span class="cm"># Запуск с пересборкой образов</span>
+<span class="fn">docker</span> compose up <span class="fl">-d</span> <span class="fl">--build</span>
+
+<span class="cm"># Статус сервисов</span>
+<span class="fn">docker</span> compose ps
+
+<span class="cm"># Логи конкретного сервиса</span>
+<span class="fn">docker</span> compose logs <span class="fl">-f</span> app
+
+<span class="cm"># Выполнить команду в сервисе</span>
+<span class="fn">docker</span> compose exec app python manage.py migrate
+
+<span class="cm"># Остановить все сервисы</span>
+<span class="fn">docker</span> compose down
+
+<span class="cm"># Остановить и удалить тома (ОСТОРОЖНО: удалит данные БД)</span>
+<span class="fn">docker</span> compose down <span class="fl">-v</span>
+
+<span class="cm"># Масштабирование сервиса</span>
+<span class="fn">docker</span> compose up <span class="fl">-d</span> <span class="fl">--scale</span> app=3
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== BEST PRACTICES ===== -->
+            <div class="section">
+                <div class="section-label">Рекомендации</div>
+                <h2>Best Practices</h2>
+
+                <p>Написание эффективных и безопасных Docker-образов требует соблюдения ряда принципов. Эти практики напрямую влияют на размер образов, скорость сборки, безопасность в production и удобство поддержки. Рассмотрим ключевые рекомендации подробно.</p>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>Минимальные базовые образы</h3>
+                        <p>Используйте минимальные базовые образы: <code>alpine</code> (~7 МБ) вместо полноценных дистрибутивов (~100+ МБ), <code>*-slim</code> варианты для языковых образов, <code>distroless</code> от Google для production (содержат только runtime, без shell и утилит), <code>scratch</code> для статически скомпилированных бинарников. Меньший образ — это меньшая поверхность атаки, быстрее скачивание и деплой, меньше расход хранилища.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Один процесс на контейнер</h3>
+                        <p>Каждый контейнер должен выполнять одну задачу: веб-сервер, база данных, кеш, воркер — каждый в отдельном контейнере. Это позволяет независимо масштабировать, обновлять и мониторить каждый компонент. Если вам нужно несколько процессов (например, nginx + приложение), используйте Docker Compose или init-системы вроде tini.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Непривилегированный пользователь</h3>
+                        <p>Никогда не запускайте приложение от root в production. Создайте непривилегированного пользователя в Dockerfile и переключитесь на него через <code>USER</code>. Это критически важно для безопасности: если злоумышленник получит доступ к контейнеру, его возможности будут ограничены правами обычного пользователя.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Оптимизация кеширования слоёв</h3>
+                        <p>Располагайте инструкции от наиболее стабильных к наиболее изменяемым. Сначала копируйте файлы зависимостей (<code>package.json</code>, <code>requirements.txt</code>, <code>go.mod</code>) и устанавливайте зависимости, затем копируйте код приложения. Так при изменении кода Docker будет пересобирать только последние слои, используя кеш для слоёв с зависимостями.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Health checks</h3>
+                        <p>Добавляйте инструкцию <code>HEALTHCHECK</code> в Dockerfile или <code>healthcheck</code> в docker-compose.yml. Это позволяет Docker (и оркестраторам вроде Kubernetes) проверять, работает ли приложение корректно, и автоматически перезапускать контейнер при сбое. Пример: <code>HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8000/health || exit 1</code>.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Сканирование на уязвимости</h3>
+                        <p>Регулярно сканируйте образы на известные уязвимости (CVE). Инструменты: <code>trivy image myapp:latest</code> (бесплатный, быстрый), Docker Scout (<code>docker scout quickview</code>), Snyk, Grype. Интегрируйте сканирование в CI/CD-пайплайн, чтобы уязвимые образы не попадали в production. Обновляйте базовые образы регулярно — именно в них чаще всего обнаруживаются уязвимости.</p>
+                    </div>
+                </div>
+
+                <p>Пример Dockerfile, следующего всем практикам:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile — Best Practices</div>
+<pre>
+<span class="cm"># Фиксированная версия базового образа</span>
+<span class="kw">FROM</span> node:20.11-alpine <span class="kw">AS</span> builder
+
+<span class="kw">WORKDIR</span> /app
+
+<span class="cm"># Сначала зависимости (кеширование)</span>
+<span class="kw">COPY</span> package.json package-lock.json ./
+<span class="kw">RUN</span> npm ci --only=production
+
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> npm run build
+
+<span class="cm"># Минимальный финальный образ</span>
+<span class="kw">FROM</span> node:20.11-alpine
+
+<span class="kw">WORKDIR</span> /app
+
+<span class="cm"># Непривилегированный пользователь</span>
+<span class="kw">RUN</span> addgroup -S app && adduser -S app -G app
+
+<span class="kw">COPY</span> --from=builder /app/node_modules ./node_modules
+<span class="kw">COPY</span> --from=builder /app/dist ./dist
+<span class="kw">COPY</span> --from=builder /app/package.json .
+
+<span class="cm"># Не root</span>
+<span class="kw">USER</span> app
+
+<span class="kw">EXPOSE</span> 3000
+
+<span class="cm"># Health check</span>
+<span class="kw">HEALTHCHECK</span> --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+<span class="kw">CMD</span> [<span class="st">"node"</span>, <span class="st">"dist/index.js"</span>]
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы контейнеризируем простое веб-приложение на Node.js, напишем оптимизированный Dockerfile с multi-stage build, настроим Docker Compose с базой данных PostgreSQL и загрузим образ в Docker Hub. Каждый шаг включает команды и пояснения.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 — Создание приложения</div>
+                    <p>Создайте простой Express-сервер. Инициализируйте проект и установите зависимости:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">Инициализация проекта</div>
+<pre>
+<span class="fn">mkdir</span> docker-tutorial && <span class="fn">cd</span> docker-tutorial
+<span class="fn">npm</span> init -y
+<span class="fn">npm</span> install express pg
+</pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">src/index.js</div>
+<pre>
+<span class="kw">const</span> express = <span class="fn">require</span>(<span class="st">'express'</span>);
+<span class="kw">const</span> { Pool } = <span class="fn">require</span>(<span class="st">'pg'</span>);
+
+<span class="kw">const</span> app = <span class="fn">express</span>();
+<span class="kw">const</span> port = process.env.PORT || <span class="fl">3000</span>;
+
+<span class="kw">const</span> pool = <span class="kw">new</span> <span class="fn">Pool</span>({
+  connectionString: process.env.DATABASE_URL,
+});
+
+app.<span class="fn">get</span>(<span class="st">'/health'</span>, (req, res) => {
+  res.<span class="fn">json</span>({ <span class="st">status</span>: <span class="st">'ok'</span> });
+});
+
+app.<span class="fn">get</span>(<span class="st">'/'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> result = <span class="kw">await</span> pool.<span class="fn">query</span>(<span class="st">'SELECT NOW()'</span>);
+  res.<span class="fn">json</span>({
+    <span class="st">message</span>: <span class="st">'Hello from Docker!'</span>,
+    <span class="st">time</span>: result.rows[<span class="fl">0</span>].now,
+  });
+});
+
+app.<span class="fn">listen</span>(port, () => {
+  console.<span class="fn">log</span>(<span class="st">`Server running on port ${port}`</span>);
+});
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 — Написание Dockerfile с multi-stage</div>
+                    <p>Создайте Dockerfile, разделяющий этап установки зависимостей и этап финального образа:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">Dockerfile</div>
+<pre>
+<span class="cm"># === Этап 1: Установка зависимостей ===</span>
+<span class="kw">FROM</span> node:20-alpine <span class="kw">AS</span> deps
+
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> package.json package-lock.json ./
+<span class="kw">RUN</span> npm ci --only=production
+
+<span class="cm"># === Этап 2: Финальный образ ===</span>
+<span class="kw">FROM</span> node:20-alpine
+
+<span class="kw">WORKDIR</span> /app
+
+<span class="kw">RUN</span> addgroup -S appgroup && adduser -S appuser -G appgroup
+
+<span class="kw">COPY</span> --from=deps /app/node_modules ./node_modules
+<span class="kw">COPY</span> src ./src
+<span class="kw">COPY</span> package.json .
+
+<span class="kw">USER</span> appuser
+
+<span class="kw">EXPOSE</span> 3000
+
+<span class="kw">HEALTHCHECK</span> --interval=30s --timeout=3s \
+  CMD wget --spider --quiet http://localhost:3000/health || exit 1
+
+<span class="kw">CMD</span> [<span class="st">"node"</span>, <span class="st">"src/index.js"</span>]
+</pre>
+                    </div>
+
+                    <p>Создайте также <code>.dockerignore</code>:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">.dockerignore</div>
+<pre>
+node_modules
+.git
+.env
+*.md
+Dockerfile
+docker-compose.yml
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 — Docker Compose с PostgreSQL</div>
+                    <p>Создайте файл <code>docker-compose.yml</code>, который объединяет приложение и базу данных:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">docker-compose.yml</div>
+<pre>
+<span class="kw">version</span>: <span class="st">"3.9"</span>
+
+<span class="kw">services</span>:
+  <span class="fn">app</span>:
+    <span class="kw">build</span>: .
+    <span class="kw">ports</span>:
+      - <span class="st">"3000:3000"</span>
+    <span class="kw">environment</span>:
+      - <span class="st">DATABASE_URL=postgresql://appuser:apppass@db:5432/appdb</span>
+      - <span class="st">PORT=3000</span>
+    <span class="kw">depends_on</span>:
+      db:
+        <span class="kw">condition</span>: service_healthy
+    <span class="kw">restart</span>: unless-stopped
+
+  <span class="fn">db</span>:
+    <span class="kw">image</span>: postgres:16-alpine
+    <span class="kw">volumes</span>:
+      - pgdata:/var/lib/postgresql/data
+    <span class="kw">environment</span>:
+      - <span class="st">POSTGRES_USER=appuser</span>
+      - <span class="st">POSTGRES_PASSWORD=apppass</span>
+      - <span class="st">POSTGRES_DB=appdb</span>
+    <span class="kw">healthcheck</span>:
+      <span class="kw">test</span>: [<span class="st">"CMD-SHELL"</span>, <span class="st">"pg_isready -U appuser -d appdb"</span>]
+      <span class="kw">interval</span>: 5s
+      <span class="kw">timeout</span>: 5s
+      <span class="kw">retries</span>: 5
+
+<span class="kw">volumes</span>:
+  pgdata:
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 — Сборка и запуск</div>
+                    <p>Запустите приложение и убедитесь, что всё работает:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">Запуск</div>
+<pre>
+<span class="cm"># Собрать и запустить все сервисы</span>
+<span class="fn">docker</span> compose up <span class="fl">-d</span> <span class="fl">--build</span>
+
+<span class="cm"># Проверить статус</span>
+<span class="fn">docker</span> compose ps
+
+<span class="cm"># Посмотреть логи</span>
+<span class="fn">docker</span> compose logs <span class="fl">-f</span> app
+
+<span class="cm"># Проверить работу приложения</span>
+<span class="fn">curl</span> http://localhost:3000
+<span class="cm"># {"message":"Hello from Docker!","time":"2026-02-25T..."}</span>
+
+<span class="fn">curl</span> http://localhost:3000/health
+<span class="cm"># {"status":"ok"}</span>
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 — Публикация в Docker Hub</div>
+                    <p>Загрузите собранный образ в Docker Hub, чтобы его можно было использовать на других машинах:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">Push в Docker Hub</div>
+<pre>
+<span class="cm"># Авторизация в Docker Hub</span>
+<span class="fn">docker</span> login
+
+<span class="cm"># Тегирование образа (username — ваш логин на Docker Hub)</span>
+<span class="fn">docker</span> tag docker-tutorial-app:latest username/docker-tutorial:1.0
+<span class="fn">docker</span> tag docker-tutorial-app:latest username/docker-tutorial:latest
+
+<span class="cm"># Загрузка в реестр</span>
+<span class="fn">docker</span> push username/docker-tutorial:1.0
+<span class="fn">docker</span> push username/docker-tutorial:latest
+
+<span class="cm"># Теперь образ можно скачать на любой машине:</span>
+<span class="fn">docker</span> pull username/docker-tutorial:1.0
+</pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> вы создали контейнеризированное приложение с базой данных, написали оптимизированный Dockerfile с multi-stage build и непривилегированным пользователем, настроили Docker Compose для локальной разработки и опубликовали образ в Docker Hub. Это типичный рабочий процесс, который ежедневно используют DevOps-инженеры.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Напишите Dockerfile для Python Flask-приложения с multi-stage build. Базовый образ первого этапа — <code>python:3.12</code>, финального — <code>python:3.12-slim</code>. Приложение должно запускаться от непривилегированного пользователя. Сравните размеры образа с multi-stage и без.</li>
+                    <li>Создайте <code>docker-compose.yml</code> для стека из трёх сервисов: Nginx (как reverse proxy на порту 80), Node.js-приложение (внутренний порт 3000, не доступен снаружи) и MongoDB. Nginx должен проксировать запросы на Node.js. Все сервисы должны быть в одной пользовательской сети.</li>
+                    <li>Запустите контейнер PostgreSQL с именованным томом. Создайте базу данных и таблицу, добавьте данные. Остановите и удалите контейнер (<code>docker rm -f</code>), затем запустите новый с тем же томом. Убедитесь, что данные сохранились.</li>
+                    <li>Создайте пользовательскую bridge-сеть. Запустите два контейнера (alpine) в этой сети. Из одного контейнера выполните <code>ping</code> второго по имени. Затем попробуйте сделать то же в стандартной bridge-сети — объясните разницу в поведении DNS.</li>
+                    <li>Установите Trivy и просканируйте три образа: <code>nginx:latest</code>, <code>nginx:alpine</code> и <code>nginx:1.25-alpine</code>. Сравните количество уязвимостей (Critical, High, Medium). Объясните, почему alpine-варианты обычно безопаснее, и какой образ вы бы выбрали для production.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://docs.docker.com/" target="_blank">Docker Documentation</a>
+                        <div class="res-desc">Официальная документация Docker — полное справочное руководство по всем компонентам и командам</div>
+                    </li>
+                    <li>
+                        <a href="https://labs.play-with-docker.com/" target="_blank">Play with Docker</a>
+                        <div class="res-desc">Бесплатная браузерная песочница для экспериментов с Docker — не требует локальной установки</div>
+                    </li>
+                    <li>
+                        <a href="https://docs.docker.com/develop/develop-images/dockerfile_best-practices/" target="_blank">Dockerfile Best Practices</a>
+                        <div class="res-desc">Официальное руководство по написанию оптимальных Dockerfile — обязательно к прочтению</div>
+                    </li>
+                    <li>
+                        <a href="https://github.com/aquasecurity/trivy" target="_blank">Trivy — Security Scanner</a>
+                        <div class="res-desc">Сканер уязвимостей для контейнерных образов, файловых систем и репозиториев</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="docker">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="nginx.html" class="nav-title">&larr; Nginx</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="cicd.html" class="nav-title">CI/CD &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

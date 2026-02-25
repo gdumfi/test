@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nginx — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Nginx</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Nginx</h1>
+            <p class="subtitle">Самый популярный веб-сервер и reverse proxy в мире DevOps</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Введение</h2>
+
+                <p>Nginx (произносится &laquo;энджин-экс&raquo;, от англ. engine-x) &mdash; это высокопроизводительный веб-сервер, обратный прокси-сервер, балансировщик нагрузки и HTTP-кеш с открытым исходным кодом. Проект был создан российским разработчиком Игорем Сысоевым в 2004 году для решения проблемы C10K &mdash; задачи обработки десяти тысяч одновременных соединений на одном сервере. В то время доминирующий веб-сервер Apache HTTP Server использовал модель &laquo;один процесс/поток на соединение&raquo;, что приводило к значительному потреблению памяти и невозможности масштабирования при большом количестве одновременных подключений. Nginx изначально проектировался с событийно-ориентированной (event-driven), асинхронной архитектурой, которая позволяет одному рабочему процессу обрабатывать тысячи одновременных соединений без создания отдельного потока для каждого из них.</p>
+
+                <p>Ключевое преимущество Nginx перед традиционными веб-серверами заключается в его неблокирующей модели обработки запросов. Вместо того чтобы блокировать поток исполнения в ожидании ответа от бэкенда, чтения файла с диска или завершения сетевой операции, Nginx регистрирует обратный вызов (callback) и переключается на обработку следующего события. Это позволяет обслуживать десятки тысяч одновременных подключений, потребляя при этом всего несколько десятков мегабайт оперативной памяти. Для сравнения: Apache в режиме prefork может потреблять сотни мегабайт при тысяче активных соединений, тогда как Nginx &mdash; порядка 2.5 МБ на 10 000 неактивных keepalive-соединений.</p>
+
+                <p>Сегодня Nginx обслуживает около 34% всех веб-сайтов в мире (по данным W3Techs), включая такие гиганты, как Netflix, Airbnb, Dropbox и WordPress.com. Он используется в самых разных ролях: как веб-сервер для раздачи статического контента, как обратный прокси-сервер (reverse proxy) перед бэкенд-приложениями на Node.js, Python, Go, Java, как балансировщик нагрузки между несколькими серверами, как SSL/TLS-терминатор для разгрузки бэкендов от криптографических операций, как кеширующий прокси для ускорения ответов и снижения нагрузки на бэкенд. Помимо открытого Nginx существует коммерческая версия Nginx Plus, предоставляющая расширенные возможности: активные health checks, динамическую реконфигурацию, встроенный мониторинг и техническую поддержку.</p>
+            </div>
+
+            <!-- ===== АРХИТЕКТУРА ===== -->
+            <div class="section">
+                <div class="section-label">Архитектура</div>
+                <h2>Архитектура Nginx</h2>
+
+                <p>Nginx использует модель master-worker, состоящую из одного master-процесса и нескольких worker-процессов. Master-процесс запускается от имени root (для привязки к привилегированным портам 80 и 443), читает и валидирует конфигурацию, управляет жизненным циклом worker-процессов, обрабатывает сигналы (reload, stop, quit) и выполняет обновление бинарного файла без простоя (binary upgrade). Worker-процессы работают от непривилегированного пользователя (обычно <code>www-data</code> или <code>nginx</code>) и выполняют всю фактическую работу: принимают входящие соединения, обрабатывают HTTP-запросы, проксируют трафик на бэкенды и отдают статические файлы. Количество worker-процессов обычно устанавливается равным числу ядер CPU командой <code>worker_processes auto;</code>.</p>
+
+                <p>Каждый worker-процесс реализует событийный цикл (event loop), используя эффективные механизмы операционной системы: epoll в Linux, kqueue в FreeBSD/macOS, IOCP в Windows. Когда приходит новое соединение, worker-процесс не создаёт для него отдельный поток &mdash; вместо этого соединение добавляется в событийный цикл, и worker переключается между активными соединениями по мере поступления данных. Этот подход называется неблокирующим вводом-выводом (non-blocking I/O). Один worker-процесс может обрабатывать тысячи одновременных соединений, а параметр <code>worker_connections</code> задаёт максимальное количество соединений на один worker. Таким образом, теоретический максимум одновременных соединений равен <code>worker_processes * worker_connections</code>.</p>
+
+                <p>Конфигурация Nginx организована в виде иерархии контекстов (блоков). На верхнем уровне находится главный (main) контекст, который содержит глобальные директивы: <code>worker_processes</code>, <code>error_log</code>, <code>pid</code>, <code>user</code>. Внутри главного контекста располагается блок <code>events</code>, управляющий параметрами обработки соединений (<code>worker_connections</code>, <code>multi_accept</code>, <code>use</code>). Блок <code>http</code> охватывает всю конфигурацию HTTP-сервера и содержит один или несколько блоков <code>server</code>, каждый из которых описывает виртуальный хост. Внутри <code>server</code> располагаются блоки <code>location</code>, определяющие правила обработки запросов по URI. Директивы наследуются от родительского контекста к дочернему: например, <code>gzip on;</code>, указанная в блоке <code>http</code>, будет действовать для всех <code>server</code> и <code>location</code>, если не переопределена явно.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Иерархия контекстов Nginx</div>
+<pre>
+<span class="cm"># Главный (main) контекст</span>
+<span class="kw">user</span> nginx;
+<span class="kw">worker_processes</span> <span class="fl">auto</span>;
+<span class="kw">error_log</span> /var/log/nginx/error.log warn;
+<span class="kw">pid</span> /run/nginx.pid;
+
+<span class="cm"># Контекст events</span>
+<span class="kw">events</span> {
+    <span class="kw">worker_connections</span> <span class="fl">1024</span>;
+    <span class="kw">multi_accept</span> on;
+    <span class="kw">use</span> epoll;
+}
+
+<span class="cm"># Контекст http</span>
+<span class="kw">http</span> {
+    <span class="kw">include</span> /etc/nginx/mime.types;
+    <span class="kw">default_type</span> application/octet-stream;
+
+    <span class="cm"># Контекст server (виртуальный хост)</span>
+    <span class="kw">server</span> {
+        <span class="kw">listen</span> <span class="fl">80</span>;
+        <span class="kw">server_name</span> example.com;
+
+        <span class="cm"># Контекст location</span>
+        <span class="kw">location</span> / {
+            <span class="kw">root</span> /var/www/html;
+            <span class="kw">index</span> index.html;
+        }
+    }
+}
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== УСТАНОВКА И НАСТРОЙКА ===== -->
+            <div class="section">
+                <div class="section-label">Установка</div>
+                <h2>Установка и базовая настройка</h2>
+
+                <p>Nginx доступен в стандартных репозиториях большинства дистрибутивов Linux, однако версии в репозиториях дистрибутивов часто отстают от актуальных релизов. Для production-серверов рекомендуется использовать официальный репозиторий Nginx, который содержит последние стабильные версии с актуальными патчами безопасности. Рассмотрим установку на наиболее популярных дистрибутивах:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Установка Nginx на Ubuntu/Debian</div>
+<pre>
+<span class="cm"># Из стандартного репозитория (может быть устаревшая версия)</span>
+<span class="fn">sudo</span> apt update
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> nginx
+
+<span class="cm"># Из официального репозитория Nginx (рекомендуется)</span>
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> curl gnupg2 ca-certificates lsb-release
+<span class="fn">curl</span> <span class="fl">-fsSL</span> https://nginx.org/keys/nginx_signing.key | <span class="fn">sudo</span> gpg <span class="fl">--dearmor</span> \
+    <span class="fl">-o</span> /usr/share/keyrings/nginx-archive-keyring.gpg
+<span class="fn">echo</span> <span class="st">"deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+    http://nginx.org/packages/ubuntu $(lsb_release -cs) nginx"</span> \
+    | <span class="fn">sudo</span> tee /etc/apt/sources.list.d/nginx.list
+<span class="fn">sudo</span> apt update
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> nginx
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Установка Nginx на CentOS/RHEL и Alpine</div>
+<pre>
+<span class="cm"># CentOS / RHEL / Rocky Linux</span>
+<span class="fn">sudo</span> dnf install <span class="fl">-y</span> nginx
+<span class="fn">sudo</span> systemctl enable <span class="fl">--now</span> nginx
+
+<span class="cm"># Alpine Linux (часто используется в Docker)</span>
+<span class="fn">apk</span> add <span class="fl">--no-cache</span> nginx
+</pre>
+                </div>
+
+                <p>После установки Nginx создаёт определённую структуру каталогов и файлов конфигурации. Главный конфигурационный файл &mdash; <code>/etc/nginx/nginx.conf</code> &mdash; содержит глобальные настройки и подключает дополнительные файлы. Директория <code>/etc/nginx/conf.d/</code> используется для хранения конфигураций виртуальных хостов (файлы <code>*.conf</code> подключаются автоматически через директиву <code>include</code>). На системах Debian/Ubuntu также существуют директории <code>/etc/nginx/sites-available/</code> (все доступные конфигурации) и <code>/etc/nginx/sites-enabled/</code> (символические ссылки на активные конфигурации). Логи по умолчанию записываются в <code>/var/log/nginx/access.log</code> и <code>/var/log/nginx/error.log</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Структура каталогов Nginx</div>
+<pre>
+/etc/nginx/
+  nginx.conf              <span class="cm"># Главный конфигурационный файл</span>
+  mime.types              <span class="cm"># Соответствие расширений файлов MIME-типам</span>
+  conf.d/                 <span class="cm"># Дополнительные конфигурации (*.conf)</span>
+    default.conf          <span class="cm"># Конфигурация по умолчанию</span>
+  sites-available/        <span class="cm"># Все конфигурации виртуальных хостов (Debian/Ubuntu)</span>
+  sites-enabled/          <span class="cm"># Активные конфигурации (симлинки)</span>
+  snippets/               <span class="cm"># Переиспользуемые фрагменты конфигурации</span>
+
+/var/log/nginx/
+  access.log              <span class="cm"># Журнал доступа</span>
+  error.log               <span class="cm"># Журнал ошибок</span>
+
+/var/www/html/            <span class="cm"># Корневая директория по умолчанию</span>
+/usr/share/nginx/html/    <span class="cm"># Альтернативная корневая (CentOS)</span>
+</pre>
+                </div>
+
+                <p>Управление Nginx осуществляется через системный менеджер systemd или через собственные сигналы Nginx. Команда <code>nginx -t</code> &mdash; самая важная: она проверяет синтаксис конфигурации без перезапуска сервера. Никогда не перезагружайте Nginx без предварительной проверки конфигурации. Команда <code>nginx -s reload</code> выполняет грациозную перезагрузку: master-процесс считывает новую конфигурацию, создаёт новые worker-процессы с обновлёнными настройками, а старые worker-процессы завершают обработку текущих запросов и затем закрываются. Это означает, что перезагрузка конфигурации происходит без потери ни единого запроса.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Управление Nginx</div>
+<pre>
+<span class="cm"># Проверка конфигурации (ОБЯЗАТЕЛЬНО перед reload!)</span>
+<span class="fn">sudo</span> nginx <span class="fl">-t</span>
+<span class="cm"># nginx: the configuration file /etc/nginx/nginx.conf syntax is ok</span>
+<span class="cm"># nginx: configuration file /etc/nginx/nginx.conf test is successful</span>
+
+<span class="cm"># Грациозная перезагрузка (без простоя)</span>
+<span class="fn">sudo</span> nginx <span class="fl">-s</span> reload
+
+<span class="cm"># Быстрая остановка (немедленное завершение)</span>
+<span class="fn">sudo</span> nginx <span class="fl">-s</span> stop
+
+<span class="cm"># Грациозная остановка (дождаться завершения текущих запросов)</span>
+<span class="fn">sudo</span> nginx <span class="fl">-s</span> quit
+
+<span class="cm"># Управление через systemd</span>
+<span class="fn">sudo</span> systemctl start nginx
+<span class="fn">sudo</span> systemctl stop nginx
+<span class="fn">sudo</span> systemctl restart nginx
+<span class="fn">sudo</span> systemctl reload nginx
+<span class="fn">sudo</span> systemctl status nginx
+<span class="fn">sudo</span> systemctl enable nginx   <span class="cm"># Автозапуск при загрузке</span>
+
+<span class="cm"># Показать версию и скомпилированные модули</span>
+<span class="fn">nginx</span> <span class="fl">-V</span>
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== СТАТИЧЕСКИЙ КОНТЕНТ ===== -->
+            <div class="section">
+                <div class="section-label">Статика</div>
+                <h2>Статический контент</h2>
+
+                <p>Раздача статических файлов &mdash; одна из основных и наиболее производительных функций Nginx. Благодаря механизму sendfile, который позволяет передавать данные напрямую из файловой системы в сетевой сокет без промежуточного копирования через пользовательское пространство, Nginx обслуживает статические файлы с минимальной нагрузкой на CPU. Для настройки раздачи статического контента используются блоки <code>server</code> и <code>location</code>. Директива <code>listen</code> указывает порт (и опционально IP-адрес), на котором сервер принимает подключения. Директива <code>server_name</code> задаёт доменное имя виртуального хоста &mdash; Nginx использует его для маршрутизации запросов к нужному блоку <code>server</code> на основе заголовка <code>Host</code>. Директива <code>root</code> указывает корневую директорию, а <code>index</code> &mdash; файл по умолчанию для директорий.</p>
+
+                <p>Блоки <code>location</code> определяют, как обрабатывать запросы в зависимости от URI. Nginx поддерживает несколько типов сопоставления, которые проверяются в определённом порядке приоритета: точное совпадение (<code>= /path</code>) имеет наивысший приоритет и немедленно прекращает поиск; приоритетный префикс (<code>^~ /path</code>) останавливает поиск, если найдено совпадение, и не проверяет регулярные выражения; регулярные выражения (<code>~ /pattern</code> для регистрозависимого и <code>~* /pattern</code> для регистронезависимого) проверяются в порядке их появления в конфигурации; обычный префикс (<code>/path</code>) используется, если ни одно регулярное выражение не совпало. Директива <code>try_files</code> &mdash; один из самых полезных инструментов: она проверяет существование файлов в указанном порядке и возвращает первый найденный или перенаправляет на fallback.</p>
+
+                <p>Для production-серверов критически важно настроить сжатие и кэширование. Gzip-сжатие может уменьшить размер текстовых файлов (HTML, CSS, JavaScript, JSON) на 70-90%, значительно ускоряя загрузку страниц. Заголовки кэширования (<code>expires</code>, <code>Cache-Control</code>) позволяют браузерам сохранять статические ресурсы локально и не запрашивать их повторно, что снижает нагрузку на сервер и ускоряет загрузку для повторных посетителей.</p>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/nginx/conf.d/static-site.conf</div>
+<pre>
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> example.com www.example.com;
+
+    <span class="cm"># Корневая директория сайта</span>
+    <span class="kw">root</span> /var/www/example.com;
+    <span class="kw">index</span> index.html index.htm;
+
+    <span class="cm"># Точное совпадение — наивысший приоритет</span>
+    <span class="kw">location</span> = /favicon.ico {
+        <span class="kw">log_not_found</span> off;
+        <span class="kw">access_log</span> off;
+    }
+
+    <span class="cm"># Приоритетный префикс — не проверять регулярки</span>
+    <span class="kw">location</span> ^~ /static/ {
+        <span class="kw">expires</span> <span class="fl">30d</span>;
+        <span class="kw">add_header</span> Cache-Control <span class="st">"public, immutable"</span>;
+    }
+
+    <span class="cm"># Регулярное выражение — кэширование медиафайлов</span>
+    <span class="kw">location</span> ~* \.(jpg|jpeg|png|gif|ico|svg|webp|woff2|css|js)$ {
+        <span class="kw">expires</span> <span class="fl">365d</span>;
+        <span class="kw">add_header</span> Cache-Control <span class="st">"public, immutable"</span>;
+        <span class="kw">access_log</span> off;
+    }
+
+    <span class="cm"># Обычный префикс — обработка всех остальных запросов</span>
+    <span class="kw">location</span> / {
+        <span class="cm"># try_files: сначала ищем файл, потом директорию, иначе 404</span>
+        <span class="kw">try_files</span> $uri $uri/ =404;
+    }
+
+    <span class="cm"># Для SPA (React, Vue, Angular): отдаём index.html для всех маршрутов</span>
+    <span class="cm"># location / {</span>
+    <span class="cm">#     try_files $uri $uri/ /index.html;</span>
+    <span class="cm"># }</span>
+
+    <span class="cm"># Gzip-сжатие</span>
+    <span class="kw">gzip</span> on;
+    <span class="kw">gzip_vary</span> on;
+    <span class="kw">gzip_proxied</span> any;
+    <span class="kw">gzip_comp_level</span> <span class="fl">6</span>;
+    <span class="kw">gzip_min_length</span> <span class="fl">1024</span>;
+    <span class="kw">gzip_types</span>
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/xml
+        image/svg+xml
+        font/woff2;
+}
+</pre>
+                </div>
+
+                <div class="note">
+                    <strong>try_files и SPA:</strong> Если вы раздаёте Single Page Application (React, Vue, Angular), используйте <code>try_files $uri $uri/ /index.html;</code> &mdash; это перенаправит все несуществующие пути на index.html, и маршрутизация будет обработана на клиенте. Без этой настройки прямой переход по URL вроде <code>/dashboard/settings</code> вернёт ошибку 404.
+                </div>
+            </div>
+
+            <!-- ===== REVERSE PROXY ===== -->
+            <div class="section">
+                <div class="section-label">Проксирование</div>
+                <h2>Reverse Proxy</h2>
+
+                <p>Обратный прокси-сервер (reverse proxy) &mdash; это промежуточный сервер, который принимает запросы от клиентов и перенаправляет их на один или несколько бэкенд-серверов. В отличие от прямого прокси (forward proxy), который действует от имени клиента, обратный прокси действует от имени сервера &mdash; клиенты даже не знают о существовании бэкендов за ним. Использование reverse proxy даёт множество преимуществ: единая точка входа для SSL/TLS-терминации (бэкенды работают по HTTP, вся криптография на прокси), балансировка нагрузки между несколькими экземплярами приложения, кеширование ответов, сжатие контента, защита бэкендов от прямого доступа из интернета, а также возможность обслуживания нескольких приложений на разных доменах с одного IP-адреса.</p>
+
+                <p>Ключевая директива для проксирования &mdash; <code>proxy_pass</code>, которая указывает адрес бэкенд-сервера. Важнейший аспект настройки reverse proxy &mdash; корректная передача заголовков. По умолчанию Nginx перезаписывает заголовок <code>Host</code> значением из <code>proxy_pass</code>, что ломает работу приложений, которые используют <code>Host</code> для генерации URL или маршрутизации. Директива <code>proxy_set_header Host $host;</code> передаёт оригинальный заголовок клиента. Заголовки <code>X-Real-IP</code> и <code>X-Forwarded-For</code> передают IP-адрес клиента &mdash; без них бэкенд будет видеть IP-адрес Nginx, а не реального пользователя. Заголовок <code>X-Forwarded-Proto</code> сообщает бэкенду, по какому протоколу (http или https) пришёл оригинальный запрос, что критично для корректной генерации ссылок и редиректов.</p>
+
+                <p>Для WebSocket-соединений необходима специальная конфигурация, поскольку WebSocket использует механизм HTTP Upgrade для переключения протокола с HTTP на постоянное двунаправленное соединение. Nginx по умолчанию не пропускает заголовки <code>Upgrade</code> и <code>Connection</code>, поэтому их нужно передать явно. Также следует настроить таймауты: <code>proxy_connect_timeout</code> контролирует время установления соединения с бэкендом, <code>proxy_read_timeout</code> &mdash; время ожидания ответа. Для WebSocket важно установить достаточно большой <code>proxy_read_timeout</code> (например, 86400 секунд), чтобы соединение не разрывалось по таймауту при отсутствии активности.</p>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/nginx/conf.d/reverse-proxy.conf</div>
+<pre>
+<span class="cm"># Определение группы бэкенд-серверов</span>
+<span class="kw">upstream</span> backend_app {
+    <span class="kw">server</span> <span class="fl">127.0.0.1</span>:<span class="fl">3000</span>;
+}
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> app.example.com;
+
+    <span class="cm"># Основной reverse proxy</span>
+    <span class="kw">location</span> / {
+        <span class="kw">proxy_pass</span> http://backend_app;
+
+        <span class="cm"># Передача оригинальных заголовков клиента</span>
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        <span class="kw">proxy_set_header</span> X-Forwarded-Proto $scheme;
+
+        <span class="cm"># Настройки буферизации</span>
+        <span class="kw">proxy_buffering</span> on;
+        <span class="kw">proxy_buffer_size</span> <span class="fl">4k</span>;
+        <span class="kw">proxy_buffers</span> <span class="fl">8</span> <span class="fl">4k</span>;
+
+        <span class="cm"># Таймауты</span>
+        <span class="kw">proxy_connect_timeout</span> <span class="fl">30s</span>;
+        <span class="kw">proxy_send_timeout</span> <span class="fl">30s</span>;
+        <span class="kw">proxy_read_timeout</span> <span class="fl">60s</span>;
+    }
+
+    <span class="cm"># WebSocket-проксирование</span>
+    <span class="kw">location</span> /ws/ {
+        <span class="kw">proxy_pass</span> http://backend_app;
+
+        <span class="kw">proxy_http_version</span> <span class="fl">1.1</span>;
+        <span class="kw">proxy_set_header</span> Upgrade $http_upgrade;
+        <span class="kw">proxy_set_header</span> Connection <span class="st">"upgrade"</span>;
+
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        <span class="cm"># Большой таймаут для долгоживущих WebSocket-соединений</span>
+        <span class="kw">proxy_read_timeout</span> <span class="fl">86400s</span>;
+        <span class="kw">proxy_send_timeout</span> <span class="fl">86400s</span>;
+    }
+
+    <span class="cm"># Проксирование API с prefixом</span>
+    <span class="kw">location</span> /api/ {
+        <span class="kw">proxy_pass</span> http://backend_app/api/;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        <span class="kw">proxy_set_header</span> X-Forwarded-Proto $scheme;
+
+        <span class="cm"># Отключение буферизации для streaming-ответов</span>
+        <span class="kw">proxy_buffering</span> off;
+    }
+}
+</pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно: trailing slash в proxy_pass.</strong> Обратите внимание на разницу: <code>proxy_pass http://backend;</code> (без слеша) передаёт URI запроса как есть, а <code>proxy_pass http://backend/;</code> (со слешем) заменяет часть URI, совпавшую с location. Например, для <code>location /app/</code> запрос <code>/app/users</code> будет проксирован как <code>/app/users</code> без слеша и как <code>/users</code> со слешем. Неправильная настройка &mdash; одна из самых частых ошибок при конфигурации reverse proxy.
+                </div>
+            </div>
+
+            <!-- ===== БАЛАНСИРОВКА НАГРУЗКИ ===== -->
+            <div class="section">
+                <div class="section-label">Балансировка</div>
+                <h2>Балансировка нагрузки</h2>
+
+                <p>Балансировка нагрузки &mdash; это распределение входящего сетевого трафика между несколькими серверами (бэкендами) для повышения доступности, надёжности и производительности приложения. Nginx реализует балансировку на уровне HTTP (Layer 7) через блок <code>upstream</code>, а также поддерживает балансировку на уровне TCP/UDP (Layer 4) через модуль <code>stream</code>. В контексте HTTP балансировка позволяет Nginx распределять запросы между серверами, учитывая различные факторы: вес сервера, количество активных соединений, хеш клиентского IP или произвольного ключа. Это обеспечивает горизонтальное масштабирование &mdash; вместо увеличения мощности одного сервера вы добавляете дополнительные серверы в пул.</p>
+
+                <p>Nginx предлагает несколько алгоритмов балансировки. <strong>Round Robin</strong> (по умолчанию) распределяет запросы равномерно между серверами по очереди. <strong>Weighted Round Robin</strong> позволяет назначить серверам веса: сервер с <code>weight=3</code> получит втрое больше запросов, чем сервер с <code>weight=1</code> &mdash; полезно, когда серверы имеют разную производительность. <strong>Least Connections</strong> (<code>least_conn</code>) направляет запрос на сервер с наименьшим числом активных соединений &mdash; оптимально для запросов с разным временем обработки. <strong>IP Hash</strong> (<code>ip_hash</code>) вычисляет хеш от IP-адреса клиента и всегда направляет запросы одного клиента на один и тот же сервер &mdash; обеспечивает session persistence (привязку сессии). <strong>Generic Hash</strong> (<code>hash</code>) позволяет задать произвольный ключ (например, URI запроса или cookie), что даёт гибкий контроль над распределением.</p>
+
+                <p>Nginx автоматически выполняет пассивные проверки здоровья (health checks): если сервер не ответил или вернул ошибку, Nginx помечает его как недоступный и не отправляет на него запросы в течение заданного периода. Параметр <code>max_fails</code> задаёт количество неудачных попыток, после которых сервер считается недоступным, а <code>fail_timeout</code> &mdash; период, в течение которого считаются ошибки и на который сервер выводится из пула. Директива <code>backup</code> помечает сервер как резервный &mdash; он получает запросы только если все основные серверы недоступны. Директива <code>down</code> помечает сервер как постоянно недоступный (для планового обслуживания). Активные health checks (периодические запросы к бэкендам) доступны только в Nginx Plus.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Алгоритмы балансировки нагрузки</div>
+<pre>
+<span class="cm"># 1. Round Robin (по умолчанию) — равномерное распределение</span>
+<span class="kw">upstream</span> backend_rr {
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span>;
+}
+
+<span class="cm"># 2. Weighted Round Robin — серверы с разной мощностью</span>
+<span class="kw">upstream</span> backend_weighted {
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span> weight=<span class="fl">5</span>;  <span class="cm"># 50% трафика</span>
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span> weight=<span class="fl">3</span>;  <span class="cm"># 30% трафика</span>
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span> weight=<span class="fl">2</span>;  <span class="cm"># 20% трафика</span>
+}
+
+<span class="cm"># 3. Least Connections — на сервер с минимумом соединений</span>
+<span class="kw">upstream</span> backend_lc {
+    <span class="kw">least_conn</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span>;
+}
+
+<span class="cm"># 4. IP Hash — привязка клиента к серверу</span>
+<span class="kw">upstream</span> backend_iphash {
+    <span class="kw">ip_hash</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span>;
+}
+
+<span class="cm"># 5. Generic Hash — хеширование по произвольному ключу</span>
+<span class="kw">upstream</span> backend_hash {
+    <span class="kw">hash</span> $request_uri consistent;
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span>;
+}
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Health checks, backup и keepalive</div>
+<pre>
+<span class="kw">upstream</span> backend_production {
+    <span class="kw">least_conn</span>;
+
+    <span class="cm"># Основные серверы с health check параметрами</span>
+    <span class="kw">server</span> <span class="fl">10.0.0.1</span>:<span class="fl">8080</span> max_fails=<span class="fl">3</span> fail_timeout=<span class="fl">30s</span> weight=<span class="fl">5</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.2</span>:<span class="fl">8080</span> max_fails=<span class="fl">3</span> fail_timeout=<span class="fl">30s</span> weight=<span class="fl">5</span>;
+    <span class="kw">server</span> <span class="fl">10.0.0.3</span>:<span class="fl">8080</span> max_fails=<span class="fl">3</span> fail_timeout=<span class="fl">30s</span> weight=<span class="fl">3</span>;
+
+    <span class="cm"># Резервный сервер (получает трафик, только если все основные недоступны)</span>
+    <span class="kw">server</span> <span class="fl">10.0.0.10</span>:<span class="fl">8080</span> backup;
+
+    <span class="cm"># Сервер на обслуживании (временно исключён из пула)</span>
+    <span class="kw">server</span> <span class="fl">10.0.0.4</span>:<span class="fl">8080</span> down;
+
+    <span class="cm"># Keepalive-соединения к бэкендам (повышает производительность)</span>
+    <span class="kw">keepalive</span> <span class="fl">32</span>;
+}
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> app.example.com;
+
+    <span class="kw">location</span> / {
+        <span class="kw">proxy_pass</span> http://backend_production;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        <span class="cm"># Обязательно для keepalive upstream</span>
+        <span class="kw">proxy_http_version</span> <span class="fl">1.1</span>;
+        <span class="kw">proxy_set_header</span> Connection <span class="st">""</span>;
+
+        <span class="cm"># Retry на следующий сервер при ошибке</span>
+        <span class="kw">proxy_next_upstream</span> error timeout http_502 http_503;
+        <span class="kw">proxy_next_upstream_tries</span> <span class="fl">3</span>;
+    }
+}
+</pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Алгоритм</th>
+                                <th>Директива</th>
+                                <th>Когда использовать</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Round Robin</td>
+                                <td>(по умолчанию)</td>
+                                <td>Одинаковые серверы, однородные запросы</td>
+                            </tr>
+                            <tr>
+                                <td>Weighted</td>
+                                <td><code>weight=N</code></td>
+                                <td>Серверы с разной мощностью</td>
+                            </tr>
+                            <tr>
+                                <td>Least Connections</td>
+                                <td><code>least_conn</code></td>
+                                <td>Запросы с разным временем обработки</td>
+                            </tr>
+                            <tr>
+                                <td>IP Hash</td>
+                                <td><code>ip_hash</code></td>
+                                <td>Необходима привязка сессии (session persistence)</td>
+                            </tr>
+                            <tr>
+                                <td>Generic Hash</td>
+                                <td><code>hash $key</code></td>
+                                <td>Кэширование по URL, маршрутизация по cookie</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== SSL/TLS и HTTPS ===== -->
+            <div class="section">
+                <div class="section-label">Безопасность соединений</div>
+                <h2>SSL/TLS и HTTPS</h2>
+
+                <p>В современном интернете HTTPS является обязательным стандартом. Браузеры помечают HTTP-сайты как небезопасные, поисковые системы понижают их в выдаче, а множество современных веб-API (геолокация, push-уведомления, Service Workers, HTTP/2) работают исключительно через защищённое соединение. SSL/TLS обеспечивает три ключевых свойства: конфиденциальность (шифрование данных), целостность (защита от модификации данных в пути) и аутентификацию (подтверждение подлинности сервера через сертификат). Nginx часто выступает как SSL/TLS-терминатор &mdash; он принимает зашифрованные соединения от клиентов, расшифровывает их и проксирует на бэкенды по обычному HTTP, разгружая бэкенды от криптографических операций.</p>
+
+                <p>Let's Encrypt &mdash; бесплатный, автоматизированный центр сертификации (CA), который произвёл революцию в доступности HTTPS. Инструмент Certbot автоматизирует получение и обновление сертификатов. Команда <code>certbot --nginx</code> не только получает сертификат, но и автоматически модифицирует конфигурацию Nginx для его использования. Сертификаты Let's Encrypt действуют 90 дней и автоматически обновляются через systemd timer или cron. При ручной настройке SSL/TLS важно указать правильные версии протоколов: TLSv1.0 и TLSv1.1 считаются устаревшими и небезопасными, рекомендуется использовать только TLSv1.2 и TLSv1.3. Набор шифров (cipher suites) определяет алгоритмы, используемые для обмена ключами и шифрования данных &mdash; правильный набор критичен для безопасности.</p>
+
+                <p>Для максимальной безопасности необходимо настроить дополнительные механизмы: SSL session caching повышает производительность за счёт повторного использования параметров TLS-сессии; HSTS (HTTP Strict Transport Security) сообщает браузерам, что сайт должен использоваться только через HTTPS, предотвращая атаки с понижением протокола; OCSP stapling позволяет серверу самостоятельно проверять статус сертификата и отправлять результат клиенту, ускоряя рукопожатие TLS. Mozilla предоставляет генератор конфигурации SSL (ssl-config.mozilla.org), который создаёт оптимальные настройки для различных уровней совместимости.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Получение сертификата Let's Encrypt</div>
+<pre>
+<span class="cm"># Установка Certbot</span>
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> certbot python3-certbot-nginx
+
+<span class="cm"># Автоматическое получение сертификата и настройка Nginx</span>
+<span class="fn">sudo</span> certbot <span class="fl">--nginx</span> <span class="fl">-d</span> example.com <span class="fl">-d</span> www.example.com
+
+<span class="cm"># Проверка автоматического обновления</span>
+<span class="fn">sudo</span> certbot renew <span class="fl">--dry-run</span>
+
+<span class="cm"># Cron для обновления (обычно создаётся автоматически)</span>
+<span class="cm"># 0 3 * * * certbot renew --quiet --post-hook "systemctl reload nginx"</span>
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/nginx/conf.d/ssl-site.conf — Production-ready HTTPS</div>
+<pre>
+<span class="cm"># Редирект HTTP → HTTPS</span>
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> example.com www.example.com;
+    <span class="kw">return</span> <span class="fl">301</span> https://$host$request_uri;
+}
+
+<span class="cm"># Основной HTTPS-сервер</span>
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">443</span> ssl http2;
+    <span class="kw">server_name</span> example.com www.example.com;
+
+    <span class="cm"># Сертификат и приватный ключ</span>
+    <span class="kw">ssl_certificate</span>     /etc/letsencrypt/live/example.com/fullchain.pem;
+    <span class="kw">ssl_certificate_key</span> /etc/letsencrypt/live/example.com/privkey.pem;
+
+    <span class="cm"># Протоколы TLS (только современные)</span>
+    <span class="kw">ssl_protocols</span> TLSv1.2 TLSv1.3;
+
+    <span class="cm"># Шифры — серверное предпочтение</span>
+    <span class="kw">ssl_prefer_server_ciphers</span> on;
+    <span class="kw">ssl_ciphers</span> ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+
+    <span class="cm"># Параметры Диффи-Хеллмана (сгенерировать: openssl dhparam -out dhparam.pem 2048)</span>
+    <span class="kw">ssl_dhparam</span> /etc/nginx/ssl/dhparam.pem;
+
+    <span class="cm"># SSL Session Cache — ускорение повторных подключений</span>
+    <span class="kw">ssl_session_cache</span> shared:SSL:<span class="fl">10m</span>;
+    <span class="kw">ssl_session_timeout</span> <span class="fl">1d</span>;
+    <span class="kw">ssl_session_tickets</span> off;
+
+    <span class="cm"># HSTS — принудительный HTTPS (2 года + включая субдомены)</span>
+    <span class="kw">add_header</span> Strict-Transport-Security <span class="st">"max-age=63072000; includeSubDomains; preload"</span> always;
+
+    <span class="cm"># OCSP Stapling — ускорение проверки сертификата</span>
+    <span class="kw">ssl_stapling</span> on;
+    <span class="kw">ssl_stapling_verify</span> on;
+    <span class="kw">ssl_trusted_certificate</span> /etc/letsencrypt/live/example.com/chain.pem;
+    <span class="kw">resolver</span> <span class="fl">8.8.8.8</span> <span class="fl">8.8.4.4</span> valid=<span class="fl">300s</span>;
+    <span class="kw">resolver_timeout</span> <span class="fl">5s</span>;
+
+    <span class="cm"># Содержимое сайта</span>
+    <span class="kw">root</span> /var/www/example.com;
+    <span class="kw">index</span> index.html;
+
+    <span class="kw">location</span> / {
+        <span class="kw">try_files</span> $uri $uri/ =404;
+    }
+}
+</pre>
+                </div>
+
+                <div class="note">
+                    <strong>Mozilla SSL Configuration Generator:</strong> Используйте <a href="https://ssl-config.mozilla.org/" target="_blank">ssl-config.mozilla.org</a> для генерации оптимальной конфигурации SSL/TLS. Выберите версию Nginx, целевой уровень совместимости (Modern / Intermediate / Old) и получите готовый набор директив, протестированный командой безопасности Mozilla.
+                </div>
+            </div>
+
+            <!-- ===== БЕЗОПАСНОСТЬ ===== -->
+            <div class="section">
+                <div class="section-label">Защита</div>
+                <h2>Безопасность</h2>
+
+                <p>Nginx предоставляет множество механизмов для защиты веб-приложений от распространённых атак. Rate limiting (ограничение скорости запросов) &mdash; один из основных инструментов защиты от DDoS-атак и брутфорса. Модуль <code>ngx_http_limit_req_module</code> использует алгоритм &laquo;leaky bucket&raquo; (дырявое ведро): запросы накапливаются до определённого предела (burst) и обрабатываются с заданной скоростью. Превышающие лимит запросы отклоняются с кодом 503 или ставятся в очередь. Директива <code>limit_req_zone</code> создаёт зону общей памяти и определяет ключ (обычно IP-адрес клиента) и скорость (например, <code>10r/s</code> &mdash; 10 запросов в секунду). Параметр <code>burst</code> задаёт размер очереди, а <code>nodelay</code> позволяет обрабатывать burst-запросы немедленно, без задержки.</p>
+
+                <p>Ограничение по IP-адресам через директивы <code>allow</code> и <code>deny</code> позволяет создавать whitelist и blacklist для доступа к определённым ресурсам &mdash; например, ограничить доступ к административной панели только корпоративной сетью. HTTP Basic Authentication через <code>auth_basic</code> и файл htpasswd добавляет простую парольную защиту &mdash; полезно для staging-окружений и административных интерфейсов. Директива <code>client_max_body_size</code> ограничивает максимальный размер тела запроса, защищая от загрузки чрезмерно больших файлов. Параметр <code>server_tokens off;</code> скрывает версию Nginx из заголовков ответа и страниц ошибок, усложняя атакующим поиск известных уязвимостей конкретной версии.</p>
+
+                <p>Заголовки безопасности (security headers) &mdash; важный уровень защиты, который Nginx может добавлять к каждому ответу. <code>X-Frame-Options: DENY</code> запрещает встраивание страницы во фреймы, защищая от clickjacking. <code>X-Content-Type-Options: nosniff</code> предотвращает MIME-sniffing &mdash; попытку браузера определить тип контента, игнорируя заголовок Content-Type. <code>Content-Security-Policy</code> (CSP) &mdash; наиболее мощный заголовок, контролирующий, из каких источников страница может загружать скрипты, стили, изображения и другие ресурсы. Правильная настройка CSP практически полностью устраняет XSS-уязвимости. <code>Referrer-Policy</code> контролирует, какая информация передаётся в заголовке Referer при переходах между страницами.</p>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/nginx/conf.d/security.conf — Полная конфигурация безопасности</div>
+<pre>
+<span class="cm"># ===== Rate Limiting =====</span>
+<span class="cm"># Зона для ограничения по IP: 10 МБ памяти, 10 запросов/секунду</span>
+<span class="kw">limit_req_zone</span> $binary_remote_addr zone=general:<span class="fl">10m</span> rate=<span class="fl">10r/s</span>;
+
+<span class="cm"># Отдельная зона для API: строже — 5 запросов/секунду</span>
+<span class="kw">limit_req_zone</span> $binary_remote_addr zone=api:<span class="fl">10m</span> rate=<span class="fl">5r/s</span>;
+
+<span class="cm"># Зона для логина: 1 запрос в секунду (защита от брутфорса)</span>
+<span class="kw">limit_req_zone</span> $binary_remote_addr zone=login:<span class="fl">10m</span> rate=<span class="fl">1r/s</span>;
+
+<span class="cm"># Ограничение одновременных соединений с одного IP</span>
+<span class="kw">limit_conn_zone</span> $binary_remote_addr zone=addr:<span class="fl">10m</span>;
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">443</span> ssl http2;
+    <span class="kw">server_name</span> example.com;
+
+    <span class="cm"># Скрыть версию Nginx</span>
+    <span class="kw">server_tokens</span> off;
+
+    <span class="cm"># Максимальный размер тела запроса (загрузка файлов)</span>
+    <span class="kw">client_max_body_size</span> <span class="fl">10m</span>;
+
+    <span class="cm"># Ограничение соединений: макс. 20 с одного IP</span>
+    <span class="kw">limit_conn</span> addr <span class="fl">20</span>;
+
+    <span class="cm"># ===== Security Headers =====</span>
+    <span class="kw">add_header</span> X-Frame-Options <span class="st">"DENY"</span> always;
+    <span class="kw">add_header</span> X-Content-Type-Options <span class="st">"nosniff"</span> always;
+    <span class="kw">add_header</span> X-XSS-Protection <span class="st">"1; mode=block"</span> always;
+    <span class="kw">add_header</span> Referrer-Policy <span class="st">"strict-origin-when-cross-origin"</span> always;
+    <span class="kw">add_header</span> Content-Security-Policy <span class="st">"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';"</span> always;
+    <span class="kw">add_header</span> Permissions-Policy <span class="st">"camera=(), microphone=(), geolocation=()"</span> always;
+
+    <span class="cm"># ===== Общий rate limit =====</span>
+    <span class="kw">location</span> / {
+        <span class="kw">limit_req</span> zone=general burst=<span class="fl">20</span> nodelay;
+        <span class="kw">proxy_pass</span> http://backend;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+    }
+
+    <span class="cm"># ===== API с более строгим лимитом =====</span>
+    <span class="kw">location</span> /api/ {
+        <span class="kw">limit_req</span> zone=api burst=<span class="fl">10</span> nodelay;
+        <span class="kw">proxy_pass</span> http://backend;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+    }
+
+    <span class="cm"># ===== Логин — жёсткий лимит =====</span>
+    <span class="kw">location</span> /auth/login {
+        <span class="kw">limit_req</span> zone=login burst=<span class="fl">5</span>;
+        <span class="kw">proxy_pass</span> http://backend;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+    }
+
+    <span class="cm"># ===== Админка — только из корпоративной сети =====</span>
+    <span class="kw">location</span> /admin/ {
+        <span class="kw">allow</span> <span class="fl">10.0.0.0</span>/8;
+        <span class="kw">allow</span> <span class="fl">192.168.1.0</span>/24;
+        <span class="kw">deny</span> all;
+
+        <span class="cm"># Дополнительно: Basic Authentication</span>
+        <span class="kw">auth_basic</span> <span class="st">"Admin Area"</span>;
+        <span class="kw">auth_basic_user_file</span> /etc/nginx/.htpasswd;
+
+        <span class="kw">proxy_pass</span> http://backend;
+    }
+}
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Создание файла .htpasswd</div>
+<pre>
+<span class="cm"># Установка утилиты htpasswd</span>
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> apache2-utils
+
+<span class="cm"># Создание файла с пользователем</span>
+<span class="fn">sudo</span> htpasswd <span class="fl">-c</span> /etc/nginx/.htpasswd admin
+<span class="cm"># Введите пароль при запросе</span>
+
+<span class="cm"># Добавление второго пользователя (без -c!)</span>
+<span class="fn">sudo</span> htpasswd /etc/nginx/.htpasswd devops
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== КЭШИРОВАНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Кэширование</div>
+                <h2>Кэширование</h2>
+
+                <p>Кэширование &mdash; один из наиболее эффективных способов повышения производительности и снижения нагрузки на бэкенд-серверы. Nginx может кэшировать ответы от проксируемых серверов, отдавая их напрямую из кэша при повторных запросах без обращения к бэкенду. Директива <code>proxy_cache_path</code> определяет расположение кэша на диске, его размер, структуру и параметры управления. Параметр <code>levels</code> задаёт глубину вложенности директорий (например, <code>1:2</code> создаёт два уровня поддиректорий для равномерного распределения файлов). Параметр <code>keys_zone</code> задаёт имя и размер зоны общей памяти, в которой хранятся ключи и метаданные кэша (1 МБ хранит около 8000 ключей). Параметр <code>max_size</code> ограничивает общий размер кэша, а <code>inactive</code> определяет, через какое время неиспользуемые записи удаляются.</p>
+
+                <p>Ключ кэша (cache key) определяет уникальность записи &mdash; по умолчанию это <code>$scheme$proxy_host$request_uri</code>. Директива <code>proxy_cache_valid</code> задаёт время кэширования для разных HTTP-кодов ответа: можно кэшировать успешные ответы (200) на 10 минут, а ошибки (404) &mdash; на 1 минуту. Техника микрокэширования (microcaching) заключается в кэшировании динамического контента на очень короткий срок (1-5 секунд), что позволяет драматически снизить нагрузку при всплесках трафика, сохраняя при этом актуальность данных. Директива <code>proxy_cache_bypass</code> позволяет обойти кэш при наличии определённого заголовка или cookie &mdash; полезно для отладки или принудительного обновления.</p>
+
+                <p>Для статических файлов используется клиентское кэширование через заголовки <code>Expires</code> и <code>Cache-Control</code>. В отличие от серверного кэша, клиентское кэширование хранит ресурсы в браузере пользователя, полностью устраняя необходимость обращения к серверу при повторных визитах. Рекомендуется использовать длительные сроки кэширования (1 год) для статических ресурсов с хешем в имени файла (например, <code>app.a1b2c3.js</code>), и короткие сроки или <code>no-cache</code> для HTML-файлов, чтобы браузер всегда получал актуальную версию страницы с правильными ссылками на ресурсы.</p>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/nginx/nginx.conf — Настройка proxy cache</div>
+<pre>
+<span class="kw">http</span> {
+    <span class="cm"># Определение кэша: путь, уровни, зона памяти, размер, время неактивности</span>
+    <span class="kw">proxy_cache_path</span> /var/cache/nginx/proxy
+        levels=<span class="fl">1</span>:<span class="fl">2</span>
+        keys_zone=app_cache:<span class="fl">10m</span>
+        max_size=<span class="fl">1g</span>
+        inactive=<span class="fl">60m</span>
+        use_temp_path=off;
+
+    <span class="kw">server</span> {
+        <span class="kw">listen</span> <span class="fl">80</span>;
+        <span class="kw">server_name</span> example.com;
+
+        <span class="kw">location</span> / {
+            <span class="kw">proxy_pass</span> http://backend;
+            <span class="kw">proxy_set_header</span> Host $host;
+
+            <span class="cm"># Включение кэша</span>
+            <span class="kw">proxy_cache</span> app_cache;
+
+            <span class="cm"># Время кэширования по HTTP-коду</span>
+            <span class="kw">proxy_cache_valid</span> <span class="fl">200</span> <span class="fl">10m</span>;
+            <span class="kw">proxy_cache_valid</span> <span class="fl">301 302</span> <span class="fl">5m</span>;
+            <span class="kw">proxy_cache_valid</span> <span class="fl">404</span> <span class="fl">1m</span>;
+
+            <span class="cm"># Ключ кэша</span>
+            <span class="kw">proxy_cache_key</span> $scheme$host$request_uri;
+
+            <span class="cm"># Заголовок для отладки (HIT / MISS / BYPASS)</span>
+            <span class="kw">add_header</span> X-Cache-Status $upstream_cache_status;
+
+            <span class="cm"># Обход кэша по заголовку</span>
+            <span class="kw">proxy_cache_bypass</span> $http_x_no_cache;
+            <span class="kw">proxy_no_cache</span> $http_x_no_cache;
+
+            <span class="cm"># Использовать кэш при ошибке бэкенда (stale-while-revalidate)</span>
+            <span class="kw">proxy_cache_use_stale</span> error timeout updating http_500 http_502 http_503;
+            <span class="kw">proxy_cache_background_update</span> on;
+            <span class="kw">proxy_cache_lock</span> on;
+        }
+
+        <span class="cm"># Микрокэширование для API (1 секунда)</span>
+        <span class="kw">location</span> /api/ {
+            <span class="kw">proxy_pass</span> http://backend;
+            <span class="kw">proxy_cache</span> app_cache;
+            <span class="kw">proxy_cache_valid</span> <span class="fl">200</span> <span class="fl">1s</span>;
+            <span class="kw">proxy_cache_key</span> $scheme$host$request_uri;
+            <span class="kw">add_header</span> X-Cache-Status $upstream_cache_status;
+        }
+
+        <span class="cm"># Статические файлы — клиентское кэширование</span>
+        <span class="kw">location</span> ~* \.(css|js|woff2|png|jpg|jpeg|gif|svg|ico)$ {
+            <span class="kw">root</span> /var/www/example.com;
+            <span class="kw">expires</span> <span class="fl">365d</span>;
+            <span class="kw">add_header</span> Cache-Control <span class="st">"public, immutable"</span>;
+            <span class="kw">access_log</span> off;
+        }
+    }
+}
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== ЛОГИРОВАНИЕ И МОНИТОРИНГ ===== -->
+            <div class="section">
+                <div class="section-label">Наблюдаемость</div>
+                <h2>Логирование и мониторинг</h2>
+
+                <p>Логирование &mdash; фундамент наблюдаемости (observability) любого веб-сервера. Nginx ведёт два основных журнала: access log (журнал доступа), записывающий информацию о каждом обработанном запросе, и error log (журнал ошибок), содержащий диагностическую информацию об ошибках, предупреждениях и отладочных сообщениях. По умолчанию access log использует формат <code>combined</code>, включающий IP-адрес клиента, дату, метод, URI, статус, размер ответа, Referer и User-Agent. Однако для полноценного анализа часто требуется расширенный формат, включающий время обработки запроса, адрес бэкенда, статус кэша и другие метрики.</p>
+
+                <p>Директива <code>log_format</code> позволяет создавать пользовательские форматы логов. Особенно полезен JSON-формат, который упрощает парсинг и интеграцию с системами анализа логов (ELK Stack: Elasticsearch + Logstash/Filebeat + Kibana). Условное логирование через директиву <code>map</code> и переменную <code>if</code> позволяет исключить из логов запросы к health check endpoint-ам (которые генерируют тысячи записей в минуту) или запросы от внутренних сервисов. Ротация логов через logrotate предотвращает заполнение диска: файлы автоматически сжимаются и удаляются по расписанию, а Nginx корректно переоткрывает файлы после ротации по сигналу <code>USR1</code>.</p>
+
+                <p>Для мониторинга производительности Nginx предоставляет модуль <code>stub_status</code>, который отображает базовые метрики: количество активных соединений, принятых и обработанных запросов, текущие чтение/запись/ожидание. Для интеграции с Prometheus используется nginx-prometheus-exporter, который парсит вывод stub_status и предоставляет метрики в формате Prometheus. В Grafana можно построить дашборды с графиками запросов в секунду (RPS), времени ответа, кодов ошибок, активных соединений и других метрик. Для более глубокого мониторинга в Nginx Plus доступен расширенный API с детальной статистикой по upstream-серверам, кэшу, TCP/UDP-потокам и другим компонентам.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Расширенное логирование и мониторинг</div>
+<pre>
+<span class="kw">http</span> {
+    <span class="cm"># Расширенный формат лога (JSON для ELK)</span>
+    <span class="kw">log_format</span> json_combined escape=json
+        <span class="st">'{'</span>
+        <span class="st">'"time":"$time_iso8601",'</span>
+        <span class="st">'"remote_addr":"$remote_addr",'</span>
+        <span class="st">'"request":"$request",'</span>
+        <span class="st">'"status":$status,'</span>
+        <span class="st">'"body_bytes_sent":$body_bytes_sent,'</span>
+        <span class="st">'"request_time":$request_time,'</span>
+        <span class="st">'"upstream_response_time":"$upstream_response_time",'</span>
+        <span class="st">'"upstream_addr":"$upstream_addr",'</span>
+        <span class="st">'"http_referer":"$http_referer",'</span>
+        <span class="st">'"http_user_agent":"$http_user_agent",'</span>
+        <span class="st">'"cache_status":"$upstream_cache_status"'</span>
+        <span class="st">'}'</span>;
+
+    <span class="cm"># Условное логирование: исключить health checks</span>
+    <span class="kw">map</span> $request_uri $loggable {
+        ~*^/health   <span class="fl">0</span>;
+        ~*^/ready    <span class="fl">0</span>;
+        default      <span class="fl">1</span>;
+    }
+
+    <span class="kw">access_log</span> /var/log/nginx/access.log json_combined if=$loggable;
+    <span class="kw">error_log</span>  /var/log/nginx/error.log warn;
+
+    <span class="kw">server</span> {
+        <span class="kw">listen</span> <span class="fl">80</span>;
+        <span class="kw">server_name</span> example.com;
+
+        <span class="cm"># ... основная конфигурация ...</span>
+
+        <span class="cm"># Endpoint для мониторинга (stub_status)</span>
+        <span class="kw">location</span> /nginx_status {
+            <span class="kw">stub_status</span>;
+            <span class="kw">allow</span> <span class="fl">127.0.0.1</span>;
+            <span class="kw">allow</span> <span class="fl">10.0.0.0</span>/8;
+            <span class="kw">deny</span> all;
+        }
+    }
+}
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/logrotate.d/nginx — Ротация логов</div>
+<pre>
+/var/log/nginx/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data adm
+    sharedscripts
+    postrotate
+        <span class="cm"># Сигнал USR1 заставляет Nginx переоткрыть файлы логов</span>
+        [ -f /var/run/nginx.pid ] &amp;&amp; kill -USR1 $(cat /var/run/nginx.pid)
+    endscript
+}
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Prometheus nginx-exporter (docker-compose)</div>
+<pre>
+<span class="cm"># docker-compose.yml</span>
+<span class="kw">services</span>:
+  <span class="kw">nginx-exporter</span>:
+    <span class="kw">image</span>: nginx/nginx-prometheus-exporter:<span class="fl">1.1</span>
+    <span class="kw">ports</span>:
+      - <span class="st">"9113:9113"</span>
+    <span class="kw">command</span>:
+      - <span class="fl">--nginx.scrape-uri=http://nginx:80/nginx_status</span>
+    <span class="kw">depends_on</span>:
+      - nginx
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== NGINX В DOCKER И KUBERNETES ===== -->
+            <div class="section">
+                <div class="section-label">Контейнеризация</div>
+                <h2>Nginx в Docker и Kubernetes</h2>
+
+                <p>Nginx &mdash; один из самых популярных образов на Docker Hub, скачанный более миллиарда раз. Официальный образ <code>nginx:alpine</code> весит всего около 40 МБ и содержит минимальную конфигурацию, готовую к использованию. В Docker Nginx используется для двух основных сценариев: как reverse proxy / load balancer перед бэкенд-контейнерами и как веб-сервер для раздачи статических файлов frontend-приложений. Для кастомизации конфигурации используется директива <code>COPY</code> в Dockerfile, которая заменяет дефолтный <code>nginx.conf</code> или файлы в <code>conf.d/</code>. Multi-stage builds &mdash; стандартная практика для frontend-приложений: на первом этапе собирается React/Vue/Angular приложение, а на втором &mdash; скомпилированные файлы копируются в образ Nginx для раздачи.</p>
+
+                <p>В Kubernetes Nginx занимает особое место как Ingress Controller &mdash; компонент, который управляет входящим HTTP/HTTPS-трафиком в кластер. Ingress-nginx (kubernetes.github.io/ingress-nginx) &mdash; наиболее популярная реализация Ingress Controller. Он автоматически генерирует конфигурацию Nginx на основе Ingress-ресурсов Kubernetes, обеспечивая маршрутизацию трафика к сервисам на основе хоста (host-based routing) и пути (path-based routing). Конфигурация через аннотации позволяет настраивать SSL, rate limiting, CORS, прокси-заголовки и другие параметры без прямого редактирования nginx.conf. ConfigMap используется для глобальной настройки Ingress Controller.</p>
+
+                <p>При работе с Nginx в контейнерах следует учитывать несколько важных моментов. Логи должны направляться в stdout/stderr (а не в файлы), чтобы Docker и Kubernetes могли их собирать. Сигналы для грациозной перезагрузки должны корректно доставляться процессу &mdash; для этого Nginx должен быть PID 1 в контейнере (используйте exec-форму CMD). Конфигурацию лучше монтировать через volume или ConfigMap, а не встраивать в образ, для возможности изменения без пересборки.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile — Multi-stage для React + Nginx</div>
+<pre>
+<span class="cm"># Этап 1: Сборка React-приложения</span>
+<span class="kw">FROM</span> node:<span class="fl">20</span>-alpine <span class="kw">AS</span> builder
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> package*.json ./
+<span class="kw">RUN</span> npm ci
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> npm run build
+
+<span class="cm"># Этап 2: Nginx для раздачи статики</span>
+<span class="kw">FROM</span> nginx:<span class="fl">1.25</span>-alpine
+<span class="kw">COPY</span> --from=builder /app/build /usr/share/nginx/html
+<span class="kw">COPY</span> nginx.conf /etc/nginx/conf.d/default.conf
+<span class="kw">EXPOSE</span> <span class="fl">80</span>
+<span class="kw">CMD</span> [<span class="st">"nginx"</span>, <span class="st">"-g"</span>, <span class="st">"daemon off;"</span>]
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">nginx.conf для SPA в Docker</div>
+<pre>
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">root</span> /usr/share/nginx/html;
+    <span class="kw">index</span> index.html;
+
+    <span class="cm"># SPA: все маршруты ведут на index.html</span>
+    <span class="kw">location</span> / {
+        <span class="kw">try_files</span> $uri $uri/ /index.html;
+    }
+
+    <span class="cm"># Кэширование статических ресурсов</span>
+    <span class="kw">location</span> ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2)$ {
+        <span class="kw">expires</span> <span class="fl">1y</span>;
+        <span class="kw">add_header</span> Cache-Control <span class="st">"public, immutable"</span>;
+    }
+
+    <span class="cm"># Не кэшировать HTML (чтобы новые версии подхватывались)</span>
+    <span class="kw">location</span> = /index.html {
+        <span class="kw">add_header</span> Cache-Control <span class="st">"no-cache"</span>;
+    }
+
+    <span class="kw">gzip</span> on;
+    <span class="kw">gzip_types</span> text/css application/javascript application/json image/svg+xml;
+}
+</pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Kubernetes Ingress с nginx-ingress-controller</div>
+<pre>
+<span class="cm"># Установка Ingress Controller через Helm</span>
+<span class="fn">helm</span> repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+<span class="fn">helm</span> install ingress-nginx ingress-nginx/ingress-nginx
+
+<span class="cm"># ---</span>
+<span class="cm"># ingress.yaml</span>
+<span class="kw">apiVersion</span>: networking.k8s.io/v1
+<span class="kw">kind</span>: Ingress
+<span class="kw">metadata</span>:
+  <span class="kw">name</span>: app-ingress
+  <span class="kw">annotations</span>:
+    <span class="cm"># SSL через cert-manager</span>
+    <span class="kw">cert-manager.io/cluster-issuer</span>: <span class="st">"letsencrypt-prod"</span>
+    <span class="cm"># Rate limiting</span>
+    <span class="kw">nginx.ingress.kubernetes.io/limit-rps</span>: <span class="st">"10"</span>
+    <span class="cm"># Прокси-настройки</span>
+    <span class="kw">nginx.ingress.kubernetes.io/proxy-body-size</span>: <span class="st">"10m"</span>
+    <span class="kw">nginx.ingress.kubernetes.io/proxy-read-timeout</span>: <span class="st">"60"</span>
+<span class="kw">spec</span>:
+  <span class="kw">ingressClassName</span>: nginx
+  <span class="kw">tls</span>:
+    - <span class="kw">hosts</span>:
+        - example.com
+      <span class="kw">secretName</span>: example-com-tls
+  <span class="kw">rules</span>:
+    - <span class="kw">host</span>: example.com
+      <span class="kw">http</span>:
+        <span class="kw">paths</span>:
+          - <span class="kw">path</span>: /
+            <span class="kw">pathType</span>: Prefix
+            <span class="kw">backend</span>:
+              <span class="kw">service</span>:
+                <span class="kw">name</span>: frontend
+                <span class="kw">port</span>:
+                  <span class="kw">number</span>: <span class="fl">80</span>
+          - <span class="kw">path</span>: /api
+            <span class="kw">pathType</span>: Prefix
+            <span class="kw">backend</span>:
+              <span class="kw">service</span>:
+                <span class="kw">name</span>: backend-api
+                <span class="kw">port</span>:
+                  <span class="kw">number</span>: <span class="fl">3000</span>
+</pre>
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы пройдём полный путь от установки Nginx до production-ready конфигурации: настроим раздачу статического сайта, добавим reverse proxy для бэкенд-приложения, получим SSL-сертификат, настроим rate limiting и включим мониторинг. Каждый шаг сопровождается командами и файлами конфигурации, которые можно использовать на реальном сервере.</p>
+
+                <div class="step">
+                    <span class="step-num">1</span>
+                    <h3>Установка Nginx и проверка</h3>
+                    <div class="code-block">
+                        <div class="code-header">terminal</div>
+<pre>
+<span class="cm"># Установка Nginx</span>
+<span class="fn">sudo</span> apt update &amp;&amp; <span class="fn">sudo</span> apt install <span class="fl">-y</span> nginx
+
+<span class="cm"># Проверка статуса</span>
+<span class="fn">sudo</span> systemctl status nginx
+
+<span class="cm"># Проверка — должна открыться страница "Welcome to nginx!"</span>
+<span class="fn">curl</span> http://localhost
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-num">2</span>
+                    <h3>Настройка статического сайта</h3>
+                    <div class="code-block">
+                        <div class="code-header">terminal</div>
+<pre>
+<span class="cm"># Создание директории для сайта</span>
+<span class="fn">sudo</span> mkdir <span class="fl">-p</span> /var/www/mysite
+<span class="fn">sudo</span> chown <span class="fl">-R</span> $USER:$USER /var/www/mysite
+
+<span class="cm"># Создание тестовой страницы</span>
+<span class="fn">echo</span> <span class="st">'&lt;h1&gt;My Static Site&lt;/h1&gt;'</span> &gt; /var/www/mysite/index.html
+</pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">/etc/nginx/conf.d/mysite.conf</div>
+<pre>
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> mysite.example.com;
+    <span class="kw">root</span> /var/www/mysite;
+    <span class="kw">index</span> index.html;
+
+    <span class="kw">location</span> / {
+        <span class="kw">try_files</span> $uri $uri/ =404;
+    }
+
+    <span class="kw">gzip</span> on;
+    <span class="kw">gzip_types</span> text/plain text/css application/javascript application/json;
+    <span class="kw">gzip_min_length</span> <span class="fl">1024</span>;
+}
+</pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">terminal</div>
+<pre>
+<span class="cm"># Удалить конфигурацию по умолчанию (если есть)</span>
+<span class="fn">sudo</span> rm <span class="fl">-f</span> /etc/nginx/conf.d/default.conf
+
+<span class="cm"># Проверить и перезагрузить</span>
+<span class="fn">sudo</span> nginx <span class="fl">-t</span> &amp;&amp; <span class="fn">sudo</span> systemctl reload nginx
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-num">3</span>
+                    <h3>Добавление reverse proxy для бэкенда на порту 3000</h3>
+                    <div class="code-block">
+                        <div class="code-header">/etc/nginx/conf.d/mysite.conf (обновлённый)</div>
+<pre>
+<span class="kw">upstream</span> backend {
+    <span class="kw">server</span> <span class="fl">127.0.0.1</span>:<span class="fl">3000</span>;
+}
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> mysite.example.com;
+    <span class="kw">root</span> /var/www/mysite;
+    <span class="kw">index</span> index.html;
+
+    <span class="cm"># Статика</span>
+    <span class="kw">location</span> / {
+        <span class="kw">try_files</span> $uri $uri/ =404;
+    }
+
+    <span class="cm"># API → бэкенд</span>
+    <span class="kw">location</span> /api/ {
+        <span class="kw">proxy_pass</span> http://backend;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        <span class="kw">proxy_set_header</span> X-Forwarded-Proto $scheme;
+    }
+
+    <span class="kw">gzip</span> on;
+    <span class="kw">gzip_types</span> text/plain text/css application/javascript application/json;
+}
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-num">4</span>
+                    <h3>Получение SSL-сертификата через Let's Encrypt</h3>
+                    <div class="code-block">
+                        <div class="code-header">terminal</div>
+<pre>
+<span class="cm"># Установка Certbot</span>
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> certbot python3-certbot-nginx
+
+<span class="cm"># Получение сертификата (автоматически настроит Nginx)</span>
+<span class="fn">sudo</span> certbot <span class="fl">--nginx</span> <span class="fl">-d</span> mysite.example.com
+
+<span class="cm"># Добавить HSTS вручную в server-блок (443):</span>
+<span class="cm"># add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;</span>
+
+<span class="cm"># Проверить автообновление</span>
+<span class="fn">sudo</span> certbot renew <span class="fl">--dry-run</span>
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-num">5</span>
+                    <h3>Настройка rate limiting и security headers</h3>
+                    <div class="code-block">
+                        <div class="code-header">/etc/nginx/conf.d/mysite.conf (финальная версия)</div>
+<pre>
+<span class="kw">limit_req_zone</span> $binary_remote_addr zone=general:<span class="fl">10m</span> rate=<span class="fl">10r/s</span>;
+<span class="kw">limit_req_zone</span> $binary_remote_addr zone=api:<span class="fl">10m</span> rate=<span class="fl">5r/s</span>;
+
+<span class="kw">upstream</span> backend {
+    <span class="kw">server</span> <span class="fl">127.0.0.1</span>:<span class="fl">3000</span>;
+}
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">80</span>;
+    <span class="kw">server_name</span> mysite.example.com;
+    <span class="kw">return</span> <span class="fl">301</span> https://$host$request_uri;
+}
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="fl">443</span> ssl http2;
+    <span class="kw">server_name</span> mysite.example.com;
+
+    <span class="kw">ssl_certificate</span>     /etc/letsencrypt/live/mysite.example.com/fullchain.pem;
+    <span class="kw">ssl_certificate_key</span> /etc/letsencrypt/live/mysite.example.com/privkey.pem;
+    <span class="kw">ssl_protocols</span> TLSv1.2 TLSv1.3;
+
+    <span class="kw">server_tokens</span> off;
+    <span class="kw">client_max_body_size</span> <span class="fl">10m</span>;
+
+    <span class="cm"># Security Headers</span>
+    <span class="kw">add_header</span> Strict-Transport-Security <span class="st">"max-age=63072000; includeSubDomains"</span> always;
+    <span class="kw">add_header</span> X-Frame-Options <span class="st">"DENY"</span> always;
+    <span class="kw">add_header</span> X-Content-Type-Options <span class="st">"nosniff"</span> always;
+
+    <span class="kw">root</span> /var/www/mysite;
+    <span class="kw">index</span> index.html;
+
+    <span class="kw">location</span> / {
+        <span class="kw">limit_req</span> zone=general burst=<span class="fl">20</span> nodelay;
+        <span class="kw">try_files</span> $uri $uri/ =404;
+    }
+
+    <span class="kw">location</span> /api/ {
+        <span class="kw">limit_req</span> zone=api burst=<span class="fl">10</span> nodelay;
+        <span class="kw">proxy_pass</span> http://backend;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        <span class="kw">proxy_set_header</span> X-Forwarded-Proto $scheme;
+    }
+
+    <span class="kw">gzip</span> on;
+    <span class="kw">gzip_types</span> text/plain text/css application/javascript application/json;
+    <span class="kw">gzip_min_length</span> <span class="fl">1024</span>;
+}
+</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-num">6</span>
+                    <h3>Включение мониторинга через stub_status</h3>
+                    <div class="code-block">
+                        <div class="code-header">Добавить в server-блок (443)</div>
+<pre>
+<span class="cm"># Endpoint мониторинга (доступен только локально)</span>
+<span class="kw">location</span> /nginx_status {
+    <span class="kw">stub_status</span>;
+    <span class="kw">allow</span> <span class="fl">127.0.0.1</span>;
+    <span class="kw">deny</span> all;
+}
+</pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">terminal</div>
+<pre>
+<span class="cm"># Проверить конфигурацию и перезагрузить</span>
+<span class="fn">sudo</span> nginx <span class="fl">-t</span> &amp;&amp; <span class="fn">sudo</span> systemctl reload nginx
+
+<span class="cm"># Проверить мониторинг</span>
+<span class="fn">curl</span> http://localhost/nginx_status
+<span class="cm"># Active connections: 2</span>
+<span class="cm"># server accepts handled requests</span>
+<span class="cm">#  156 156 298</span>
+<span class="cm"># Reading: 0 Writing: 1 Waiting: 1</span>
+</pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> вы получили production-ready конфигурацию Nginx с раздачей статики, reverse proxy для бэкенда, HTTPS с Let's Encrypt, HSTS, rate limiting, security headers, gzip-сжатием и мониторингом через stub_status. Эта конфигурация подходит для реальных проектов и может быть расширена добавлением кэширования, WebSocket-поддержки и балансировки нагрузки.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Настрой Nginx для раздачи статического сайта с gzip и кэшированием. Создай конфигурацию с <code>gzip on</code>, <code>gzip_types</code> для текстовых форматов, заголовками <code>Cache-Control</code> и <code>expires</code> для статических ресурсов. Проверь сжатие через <code>curl -H "Accept-Encoding: gzip" -I</code>.</li>
+                    <li>Настрой reverse proxy для Node.js приложения с WebSocket-поддержкой. Создай upstream-блок, настрой <code>proxy_pass</code> с передачей заголовков <code>Host</code>, <code>X-Real-IP</code>, <code>X-Forwarded-For</code>. Для WebSocket добавь отдельный location с заголовками <code>Upgrade</code> и <code>Connection</code> и увеличенным <code>proxy_read_timeout</code>.</li>
+                    <li>Настрой балансировку между 3 бэкендами с health checks. Используй <code>upstream</code> с <code>least_conn</code>, параметрами <code>max_fails=3</code> и <code>fail_timeout=30s</code>. Добавь один сервер как <code>backup</code>. Настрой <code>keepalive 32</code> для повышения производительности.</li>
+                    <li>Получи SSL-сертификат через Let's Encrypt и настрой HTTPS с HSTS. Установи Certbot, получи сертификат через <code>certbot --nginx</code>. Настрой редирект HTTP на HTTPS, добавь <code>Strict-Transport-Security</code>, <code>ssl_session_cache</code> и <code>ssl_stapling</code>. Проверь через <a href="https://www.ssllabs.com/ssltest/" target="_blank">SSL Labs</a>.</li>
+                    <li>Настрой rate limiting, security headers и мониторинг через stub_status. Создай три зоны <code>limit_req_zone</code> (общая, API, логин) с разными скоростями. Добавь заголовки <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Content-Security-Policy</code>. Включи <code>stub_status</code> с ограничением доступа по IP.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://nginx.org/en/docs/" target="_blank">Nginx Official Documentation</a>
+                        <div class="res-desc">Официальная документация Nginx &mdash; полное справочное руководство по всем директивам и модулям</div>
+                    </li>
+                    <li>
+                        <a href="https://www.digitalocean.com/community/tags/nginx" target="_blank">DigitalOcean Nginx Tutorials</a>
+                        <div class="res-desc">Пошаговые руководства по настройке Nginx для различных сценариев &mdash; от простой раздачи статики до сложной балансировки</div>
+                    </li>
+                    <li>
+                        <a href="https://ssl-config.mozilla.org/" target="_blank">Mozilla SSL Configuration Generator</a>
+                        <div class="res-desc">Генератор оптимальной SSL/TLS-конфигурации для Nginx, Apache, HAProxy и других серверов</div>
+                    </li>
+                    <li>
+                        <a href="https://github.com/trimstray/nginx-admins-handbook" target="_blank">Nginx Admin's Handbook (GitHub)</a>
+                        <div class="res-desc">Подробное руководство по администрированию Nginx с примерами конфигураций, best practices и объяснением внутренней работы</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="nginx">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="scripting.html" class="nav-title">&larr; Bash & Python</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="docker.html" class="nav-title">Docker &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

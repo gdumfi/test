@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Linux</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Linux</h1>
+            <p class="subtitle">Фундамент DevOps — почти все серверы работают на Linux</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Почему Linux — основа DevOps</h2>
+
+                <p>Linux — это семейство операционных систем на основе ядра Linux, созданного Линусом Торвальдсом в 1991 году. В отличие от Windows или macOS, Linux является полностью открытым проектом: исходный код ядра доступен каждому, а вокруг него сформировалось огромное сообщество разработчиков, которые создают дистрибутивы, утилиты и целые экосистемы. Для DevOps-инженера Linux — не просто ещё одна операционная система, а повседневная рабочая среда. По статистике, более 96% серверов в интернете работают на Linux, а все основные облачные платформы (AWS, GCP, Azure) используют Linux в качестве базовой ОС для виртуальных машин и контейнеров.</p>
+
+                <p>Контейнеры Docker, оркестрация Kubernetes, системы CI/CD, инструменты мониторинга — всё это построено вокруг Linux. Даже если вы разрабатываете на Windows или macOS, ваш код в продакшене почти наверняка будет работать на Linux-сервере. Понимание принципов работы Linux, его командной строки, файловой системы, управления процессами и сетевых инструментов — обязательное условие для работы в DevOps. Без этих навыков невозможно эффективно настраивать серверы, диагностировать проблемы и автоматизировать инфраструктуру.</p>
+
+                <p>Существует множество дистрибутивов Linux, каждый из которых адаптирован под определённые задачи. <strong>Ubuntu</strong> — самый популярный дистрибутив для серверов, отличается обширной документацией и огромным сообществом. <strong>CentOS/Rocky Linux</strong> — наследники Red Hat Enterprise Linux, широко применяются в корпоративных средах. <strong>Debian</strong> — стабильный и надёжный дистрибутив, на основе которого построен Ubuntu. <strong>Alpine Linux</strong> — минималистичный дистрибутив размером всего 5 МБ, идеальный для Docker-контейнеров благодаря крошечному размеру и встроенной защите. В рамках этого курса мы будем использовать Ubuntu, однако большинство команд и концепций универсальны для всех дистрибутивов.</p>
+            </div>
+
+            <!-- ===== ФАЙЛОВАЯ СИСТЕМА ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Файловая система</h2>
+
+                <p>Одна из фундаментальных идей Linux — <strong>всё является файлом</strong>. Обычные файлы, директории, устройства (жёсткие диски, USB-накопители), сетевые сокеты, каналы для межпроцессного взаимодействия — всё это представлено в виде файлов в единой иерархии. Эта философия позволяет работать с совершенно разными сущностями при помощи одних и тех же инструментов. Например, вы можете прочитать информацию о процессоре из файла <code>/proc/cpuinfo</code> точно так же, как прочитали бы обычный текстовый файл.</p>
+
+                <p>Структура файловой системы Linux стандартизирована документом <strong>FHS (Filesystem Hierarchy Standard)</strong>. В отличие от Windows, где каждый диск имеет свою букву (C:\, D:\), в Linux всё начинается с единого корня — <code>/</code>. Все остальные устройства и разделы монтируются в виде поддиректорий этого корня. Такой подход создаёт единое пространство имён для всех файлов системы, независимо от того, на каком физическом устройстве они хранятся.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Директория</th>
+                                <th>Назначение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/</code></td>
+                                <td>Корень файловой системы, начало всей иерархии</td>
+                            </tr>
+                            <tr>
+                                <td><code>/home</code></td>
+                                <td>Домашние каталоги пользователей (<code>/home/username</code>)</td>
+                            </tr>
+                            <tr>
+                                <td><code>/etc</code></td>
+                                <td>Конфигурационные файлы системы и сервисов</td>
+                            </tr>
+                            <tr>
+                                <td><code>/var</code></td>
+                                <td>Изменяемые данные: логи (<code>/var/log</code>), базы данных, почта</td>
+                            </tr>
+                            <tr>
+                                <td><code>/tmp</code></td>
+                                <td>Временные файлы, очищается при перезагрузке</td>
+                            </tr>
+                            <tr>
+                                <td><code>/usr</code></td>
+                                <td>Пользовательские программы, библиотеки и документация</td>
+                            </tr>
+                            <tr>
+                                <td><code>/opt</code></td>
+                                <td>Опциональное ПО сторонних производителей</td>
+                            </tr>
+                            <tr>
+                                <td><code>/proc</code></td>
+                                <td>Виртуальная ФС с информацией о ядре и процессах</td>
+                            </tr>
+                            <tr>
+                                <td><code>/dev</code></td>
+                                <td>Файлы устройств (диски, терминалы, случайные числа)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Для DevOps-инженера особенно важны несколько каталогов. В <code>/etc</code> хранятся конфигурации всех сервисов — nginx, ssh, сетевых интерфейсов. В <code>/var/log</code> находятся логи системы и приложений, которые необходимо анализировать при отладке. Каталог <code>/proc</code> предоставляет информацию о работающей системе в реальном времени: загрузке процессора, использовании памяти, сетевых соединениях. А директория <code>/dev</code> содержит специальные файлы устройств, такие как <code>/dev/null</code> (чёрная дыра для данных) и <code>/dev/urandom</code> (генератор случайных чисел).</p>
+            </div>
+
+            <!-- ===== РАБОТА С ФАЙЛАМИ ===== -->
+            <div class="section">
+                <h2>Работа с файлами и директориями</h2>
+
+                <p>Умение работать с файлами и директориями через командную строку — базовый навык для любого DevOps-инженера. Графический интерфейс на серверах, как правило, отсутствует, и вся работа ведётся через терминал по SSH. Даже при наличии GUI, командная строка остаётся значительно более эффективным инструментом: команды можно комбинировать, автоматизировать с помощью скриптов и выполнять массовые операции за считанные секунды.</p>
+
+                <p>Навигация по файловой системе осуществляется с помощью команд <code>cd</code> (change directory), <code>pwd</code> (print working directory) и <code>ls</code> (list). Команда <code>ls</code> с ключом <code>-la</code> показывает все файлы (включая скрытые, начинающиеся с точки) с подробной информацией: права доступа, владелец, размер, дата изменения. Понимание вывода <code>ls -la</code> — один из ключей к уверенной работе в Linux.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Навигация и просмотр</div>
+                    <pre><code><span class="fn">pwd</span>                          <span class="cm"># показать текущую директорию</span>
+<span class="fn">ls</span> <span class="fl">-la</span>                       <span class="cm"># все файлы с подробностями</span>
+<span class="fn">ls</span> <span class="fl">-lh</span> /var/log               <span class="cm"># размеры в удобном формате</span>
+<span class="fn">cd</span> /etc/nginx                  <span class="cm"># перейти в директорию</span>
+<span class="fn">cd</span> ..                          <span class="cm"># подняться на уровень выше</span>
+<span class="fn">cd</span> ~                           <span class="cm"># вернуться в домашнюю директорию</span>
+<span class="fn">cd</span> -                           <span class="cm"># вернуться в предыдущую директорию</span></code></pre>
+                </div>
+
+                <p>Создание, копирование, перемещение и удаление файлов выполняется командами <code>mkdir</code>, <code>cp</code>, <code>mv</code> и <code>rm</code>. Команда <code>rm</code> требует особой осторожности — в Linux нет корзины, и удалённые файлы восстановить крайне сложно. Ключ <code>-r</code> (recursive) позволяет применять команды к директориям и их содержимому, а <code>-f</code> (force) подавляет запросы на подтверждение. Комбинация <code>rm -rf</code> — одна из самых опасных команд в Linux, способная уничтожить всю систему при неправильном использовании.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Операции с файлами</div>
+                    <pre><code><span class="fn">mkdir</span> <span class="fl">-p</span> projects/webapp/src   <span class="cm"># создать вложенные директории</span>
+<span class="fn">cp</span> config.yml config.yml.bak    <span class="cm"># создать резервную копию</span>
+<span class="fn">cp</span> <span class="fl">-r</span> src/ backup/              <span class="cm"># рекурсивно скопировать директорию</span>
+<span class="fn">mv</span> old_name.txt new_name.txt    <span class="cm"># переименовать файл</span>
+<span class="fn">mv</span> file.txt /tmp/               <span class="cm"># переместить файл</span>
+<span class="fn">rm</span> file.txt                     <span class="cm"># удалить файл</span>
+<span class="fn">rm</span> <span class="fl">-r</span> directory/                <span class="cm"># удалить директорию с содержимым</span></code></pre>
+                </div>
+
+                <p>Для поиска и анализа содержимого файлов Linux предлагает мощный набор инструментов. Команда <code>find</code> ищет файлы по имени, размеру, дате изменения и другим критериям. Команда <code>grep</code> ищет текст внутри файлов по шаблону и является одним из самых часто используемых инструментов при отладке. Для просмотра содержимого файлов используются <code>cat</code> (полный вывод), <code>less</code> (постраничный просмотр), <code>head</code> и <code>tail</code> (начало и конец файла). Особенно полезна команда <code>tail -f</code>, которая отслеживает обновления файла в реальном времени — незаменимый инструмент при мониторинге логов.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Поиск и просмотр</div>
+                    <pre><code><span class="fn">find</span> /var/log <span class="fl">-name</span> <span class="st">"*.log"</span> <span class="fl">-mtime</span> <span class="fl">-7</span>   <span class="cm"># файлы .log, изменённые за 7 дней</span>
+<span class="fn">find</span> . <span class="fl">-type f</span> <span class="fl">-size</span> +100M              <span class="cm"># файлы больше 100 МБ</span>
+<span class="fn">grep</span> <span class="fl">-r</span> <span class="st">"error"</span> /var/log/               <span class="cm"># рекурсивный поиск "error" в логах</span>
+<span class="fn">grep</span> <span class="fl">-i</span> <span class="fl">-n</span> <span class="st">"failed"</span> auth.log          <span class="cm"># регистронезависимый поиск с номерами строк</span>
+<span class="fn">cat</span> /etc/hostname                       <span class="cm"># вывести содержимое файла</span>
+<span class="fn">less</span> /var/log/syslog                    <span class="cm"># постраничный просмотр (q для выхода)</span>
+<span class="fn">head</span> <span class="fl">-20</span> access.log                    <span class="cm"># первые 20 строк</span>
+<span class="fn">tail</span> <span class="fl">-f</span> /var/log/syslog                <span class="cm"># следить за логом в реальном времени</span></code></pre>
+                </div>
+
+                <p>Символические ссылки (<code>ln -s</code>) — это аналог ярлыков в Windows, но значительно более мощные. Они позволяют создать файл-указатель на другой файл или директорию в любом месте файловой системы. Это часто используется для управления версиями конфигураций, создания удобных путей к часто используемым директориям и организации структуры проектов. Жёсткие ссылки (<code>ln</code> без ключа <code>-s</code>) создают дополнительное имя для того же физического файла и работают только в пределах одного раздела.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Ссылки</div>
+                    <pre><code><span class="fn">ln</span> <span class="fl">-s</span> /etc/nginx/sites-available/mysite /etc/nginx/sites-enabled/mysite
+<span class="cm"># создать символическую ссылку</span>
+
+<span class="fn">ln</span> <span class="fl">-s</span> /opt/app/current/config.yml ~/config.yml
+<span class="cm"># удобный доступ к конфигурации из домашней директории</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ПОЛЬЗОВАТЕЛИ И ПРАВА ===== -->
+            <div class="section">
+                <h2>Пользователи и права доступа</h2>
+
+                <p>Linux — многопользовательская операционная система, и система прав доступа — один из её ключевых механизмов безопасности. Каждый файл и директория принадлежат определённому пользователю и группе. Для каждого объекта определены три набора прав: для владельца (user), для группы (group) и для всех остальных (others). Каждый набор включает три бита: чтение (r — read), запись (w — write) и выполнение (x — execute). Для директорий «выполнение» означает возможность входа в неё (cd), а «чтение» — возможность просмотра списка файлов.</p>
+
+                <p>Информация о пользователях хранится в файле <code>/etc/passwd</code>, а зашифрованные пароли — в <code>/etc/shadow</code> (доступном только root). Группы описаны в <code>/etc/group</code>. Суперпользователь <strong>root</strong> (UID 0) имеет неограниченные права в системе. Однако работать постоянно под root категорически не рекомендуется — одна неосторожная команда может уничтожить систему. Вместо этого используется механизм <code>sudo</code>, который позволяет обычному пользователю выполнять отдельные команды с правами root, при этом каждое такое действие логируется.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Управление пользователями</div>
+                    <pre><code><span class="fn">whoami</span>                         <span class="cm"># текущий пользователь</span>
+<span class="fn">id</span>                             <span class="cm"># UID, GID и группы текущего пользователя</span>
+<span class="fn">sudo</span> <span class="fn">useradd</span> <span class="fl">-m</span> <span class="fl">-s</span> /bin/bash deploy   <span class="cm"># создать пользователя с домашним каталогом</span>
+<span class="fn">sudo</span> <span class="fn">passwd</span> deploy              <span class="cm"># задать пароль</span>
+<span class="fn">sudo</span> <span class="fn">usermod</span> <span class="fl">-aG</span> sudo deploy   <span class="cm"># добавить в группу sudo</span>
+<span class="fn">sudo</span> <span class="fn">userdel</span> <span class="fl">-r</span> olduser        <span class="cm"># удалить пользователя с домашним каталогом</span>
+<span class="fn">groups</span> deploy                  <span class="cm"># показать группы пользователя</span></code></pre>
+                </div>
+
+                <p>Права доступа изменяются командой <code>chmod</code>. Существует два формата задания прав: символьный и числовой. Символьный формат использует буквы: <code>chmod u+x script.sh</code> добавляет право на выполнение для владельца. Числовой формат использует восьмеричные числа, где каждая цифра — сумма прав: r=4, w=2, x=1. Например, <code>chmod 755</code> означает: владелец — чтение, запись, выполнение (7=4+2+1), группа — чтение, выполнение (5=4+1), остальные — чтение, выполнение (5=4+1). Владельца файла изменяет команда <code>chown</code>, а группу — <code>chgrp</code>.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Число</th>
+                                <th>Права</th>
+                                <th>Значение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>7</code></td><td><code>rwx</code></td><td>Чтение, запись, выполнение</td></tr>
+                            <tr><td><code>6</code></td><td><code>rw-</code></td><td>Чтение и запись</td></tr>
+                            <tr><td><code>5</code></td><td><code>r-x</code></td><td>Чтение и выполнение</td></tr>
+                            <tr><td><code>4</code></td><td><code>r--</code></td><td>Только чтение</td></tr>
+                            <tr><td><code>0</code></td><td><code>---</code></td><td>Нет доступа</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Права доступа</div>
+                    <pre><code><span class="fn">chmod</span> <span class="fl">755</span> script.sh             <span class="cm"># rwxr-xr-x — стандарт для скриптов</span>
+<span class="fn">chmod</span> <span class="fl">644</span> config.yml             <span class="cm"># rw-r--r-- — стандарт для конфигурационных файлов</span>
+<span class="fn">chmod</span> <span class="fl">600</span> ~/.ssh/id_rsa          <span class="cm"># rw------- — SSH-ключ должен быть закрыт</span>
+<span class="fn">chmod</span> u+x deploy.sh             <span class="cm"># добавить выполнение для владельца</span>
+<span class="fn">chmod</span> go-w sensitive.conf        <span class="cm"># убрать запись для группы и остальных</span>
+
+<span class="fn">chown</span> deploy:www-data /var/www   <span class="cm"># изменить владельца и группу</span>
+<span class="fn">chown</span> <span class="fl">-R</span> deploy: /opt/app        <span class="cm"># рекурсивно для всей директории</span>
+<span class="fn">chgrp</span> docker /var/run/docker.sock <span class="cm"># изменить только группу</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>umask</strong> определяет права по умолчанию для новых файлов. Значение umask вычитается из максимальных прав (666 для файлов, 777 для директорий). Стандартная umask <code>022</code> означает, что новые файлы создаются с правами 644, а директории — с правами 755. Проверить текущую маску можно командой <code>umask</code>, а изменить — <code>umask 027</code>.
+                </div>
+            </div>
+
+            <!-- ===== ПРОЦЕССЫ ===== -->
+            <div class="section">
+                <h2>Процессы</h2>
+
+                <p>Процесс — это запущенная программа. Каждый процесс в Linux получает уникальный идентификатор — <strong>PID</strong> (Process ID). Когда система загружается, ядро запускает процесс с PID 1 (обычно это systemd), от которого порождаются все остальные процессы в системе. Каждый процесс имеет родительский процесс (PPID), что формирует дерево процессов. Процесс наследует от родителя окружение, переменные среды и открытые файловые дескрипторы.</p>
+
+                <p>Для просмотра процессов используется команда <code>ps</code>. В простейшем виде <code>ps</code> показывает только процессы текущего терминала, но с ключами <code>aux</code> отображает все процессы в системе. Для интерактивного мониторинга предназначены утилиты <code>top</code> и её улучшенная версия <code>htop</code>, которые показывают процессы в реальном времени, отсортированные по потреблению CPU или памяти. Это незаменимые инструменты для диагностики проблем с производительностью сервера.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Просмотр процессов</div>
+                    <pre><code><span class="fn">ps</span> <span class="fl">aux</span>                        <span class="cm"># все процессы с подробной информацией</span>
+<span class="fn">ps</span> <span class="fl">aux</span> | <span class="fn">grep</span> nginx            <span class="cm"># найти процессы nginx</span>
+<span class="fn">ps</span> <span class="fl">-ef</span> <span class="fl">--forest</span>               <span class="cm"># дерево процессов</span>
+<span class="fn">top</span>                            <span class="cm"># интерактивный мониторинг (q для выхода)</span>
+<span class="fn">htop</span>                           <span class="cm"># улучшенный мониторинг (нужна установка)</span>
+<span class="fn">pgrep</span> <span class="fl">-la</span> nginx               <span class="cm"># найти PID по имени процесса</span></code></pre>
+                </div>
+
+                <p>Управление процессами осуществляется через сигналы. Команда <code>kill</code> отправляет сигнал процессу по его PID. Наиболее важные сигналы: <strong>SIGTERM</strong> (15) — вежливая просьба завершиться, процесс может обработать этот сигнал и корректно завершить работу (сохранить данные, закрыть соединения); <strong>SIGKILL</strong> (9) — немедленное принудительное завершение, процесс не может перехватить этот сигнал; <strong>SIGHUP</strong> (1) — часто используется для перечитывания конфигурации без перезапуска сервиса. Всегда пробуйте SIGTERM перед SIGKILL — принудительное завершение может привести к повреждению данных.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Управление процессами</div>
+                    <pre><code><span class="fn">kill</span> 1234                      <span class="cm"># SIGTERM — корректное завершение</span>
+<span class="fn">kill</span> <span class="fl">-9</span> 1234                   <span class="cm"># SIGKILL — принудительное завершение</span>
+<span class="fn">kill</span> <span class="fl">-HUP</span> 1234                 <span class="cm"># SIGHUP — перечитать конфигурацию</span>
+<span class="fn">killall</span> nginx                  <span class="cm"># завершить все процессы по имени</span>
+<span class="fn">pkill</span> <span class="fl">-f</span> <span class="st">"python app.py"</span>       <span class="cm"># завершить по шаблону команды</span></code></pre>
+                </div>
+
+                <p>Linux позволяет запускать процессы в фоновом режиме. Добавление <code>&amp;</code> в конец команды запускает её в фоне. Команда <code>jobs</code> показывает фоновые задачи текущего терминала, <code>fg</code> переводит задачу на передний план, а <code>bg</code> — в фон. Утилита <code>nohup</code> позволяет процессу продолжить работу после закрытия терминала. Для управления приоритетом процессов используются команды <code>nice</code> (задать приоритет при запуске) и <code>renice</code> (изменить приоритет работающего процесса). Значения nice варьируются от -20 (высший приоритет) до 19 (низший).</p>
+
+                <div class="code-block">
+                    <div class="code-header">Фоновые процессы и приоритеты</div>
+                    <pre><code><span class="fn">./long_task.sh</span> &amp;               <span class="cm"># запуск в фоне</span>
+<span class="fn">nohup</span> ./server.sh &amp;            <span class="cm"># продолжит работу после закрытия терминала</span>
+<span class="fn">jobs</span>                           <span class="cm"># список фоновых задач</span>
+<span class="fn">fg</span> %1                          <span class="cm"># вернуть задачу 1 на передний план</span>
+<span class="fn">bg</span> %1                          <span class="cm"># перевести задачу 1 в фон</span>
+<span class="cm"># Ctrl+Z — приостановить текущий процесс</span>
+
+<span class="fn">nice</span> <span class="fl">-n</span> 10 ./heavy_task.sh     <span class="cm"># запустить с пониженным приоритетом</span>
+<span class="fn">renice</span> <span class="fl">-n</span> 5 <span class="fl">-p</span> 1234          <span class="cm"># изменить приоритет процесса 1234</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== SYSTEMD ===== -->
+            <div class="section">
+                <h2>Systemd и сервисы</h2>
+
+                <p><strong>Systemd</strong> — это система инициализации и менеджер сервисов в большинстве современных дистрибутивов Linux. Systemd запускается первым (PID 1) и берёт на себя управление всеми остальными процессами в системе. В отличие от предшественников (SysVinit, Upstart), systemd обеспечивает параллельный запуск сервисов, управление зависимостями между ними, автоматический перезапуск упавших процессов и единый интерфейс для логирования. Понимание systemd необходимо для настройки и обслуживания любого современного Linux-сервера.</p>
+
+                <p>Основные единицы работы systemd называются <strong>unit-файлами</strong>. Наиболее распространённый тип — <code>.service</code>, описывающий сервис (демон). Управление сервисами осуществляется командой <code>systemctl</code>. Она позволяет запускать, останавливать, перезапускать сервисы, а также включать или выключать их автозапуск при загрузке системы. Команда <code>systemctl status</code> показывает текущее состояние сервиса, его PID, время работы и последние строки журнала.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Управление сервисами через systemctl</div>
+                    <pre><code><span class="fn">systemctl</span> status nginx         <span class="cm"># состояние сервиса</span>
+<span class="fn">systemctl</span> start nginx          <span class="cm"># запустить сервис</span>
+<span class="fn">systemctl</span> stop nginx           <span class="cm"># остановить сервис</span>
+<span class="fn">systemctl</span> restart nginx        <span class="cm"># перезапустить сервис</span>
+<span class="fn">systemctl</span> reload nginx         <span class="cm"># перечитать конфигурацию без перезапуска</span>
+<span class="fn">systemctl</span> enable nginx         <span class="cm"># включить автозапуск при загрузке</span>
+<span class="fn">systemctl</span> disable nginx        <span class="cm"># выключить автозапуск</span>
+<span class="fn">systemctl</span> is-active nginx      <span class="cm"># проверить, запущен ли сервис</span>
+<span class="fn">systemctl</span> list-units <span class="fl">--type</span>=service  <span class="cm"># список всех сервисов</span></code></pre>
+                </div>
+
+                <p>Журнал systemd управляется утилитой <code>journalctl</code>. В отличие от классических текстовых логов в <code>/var/log</code>, journalctl хранит структурированные записи с метаданными: время, PID, уровень важности, имя юнита. Это позволяет выполнять сложные запросы: фильтровать по сервису, по времени, по уровню ошибки. Команда <code>journalctl -f</code> аналогична <code>tail -f</code> и показывает новые записи журнала в реальном времени.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с журналом</div>
+                    <pre><code><span class="fn">journalctl</span> <span class="fl">-u</span> nginx            <span class="cm"># логи конкретного сервиса</span>
+<span class="fn">journalctl</span> <span class="fl">-u</span> nginx <span class="fl">-f</span>        <span class="cm"># следить за логами в реальном времени</span>
+<span class="fn">journalctl</span> <span class="fl">-u</span> nginx <span class="fl">--since</span> <span class="st">"1 hour ago"</span>  <span class="cm"># логи за последний час</span>
+<span class="fn">journalctl</span> <span class="fl">-p</span> err             <span class="cm"># только ошибки</span>
+<span class="fn">journalctl</span> <span class="fl">-b</span>                <span class="cm"># логи с момента загрузки</span>
+<span class="fn">journalctl</span> <span class="fl">--disk-usage</span>      <span class="cm"># сколько места занимает журнал</span></code></pre>
+                </div>
+
+                <p>Для развёртывания собственных приложений в продакшене рекомендуется создавать свои unit-файлы systemd. Это обеспечивает автоматический запуск приложения при загрузке системы, перезапуск при падении, управление зависимостями и централизованное логирование. Unit-файл размещается в <code>/etc/systemd/system/</code> и описывает, как запускать приложение, от имени какого пользователя, какие переменные окружения использовать и от каких сервисов зависеть.</p>
+
+                <div class="code-block">
+                    <div class="code-header">/etc/systemd/system/myapp.service</div>
+                    <pre><code><span class="kw">[Unit]</span>
+<span class="fn">Description</span>=My Web Application
+<span class="fn">After</span>=network.target
+<span class="fn">Wants</span>=network-online.target
+
+<span class="kw">[Service]</span>
+<span class="fn">Type</span>=simple
+<span class="fn">User</span>=deploy
+<span class="fn">Group</span>=deploy
+<span class="fn">WorkingDirectory</span>=/opt/myapp
+<span class="fn">ExecStart</span>=/usr/bin/python3 /opt/myapp/server.py
+<span class="fn">Restart</span>=always
+<span class="fn">RestartSec</span>=5
+<span class="fn">Environment</span>=<span class="st">NODE_ENV=production</span>
+<span class="fn">StandardOutput</span>=journal
+<span class="fn">StandardError</span>=journal
+
+<span class="kw">[Install]</span>
+<span class="fn">WantedBy</span>=multi-user.target</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Активация нового сервиса</div>
+                    <pre><code><span class="fn">sudo</span> systemctl daemon-reload     <span class="cm"># перечитать unit-файлы</span>
+<span class="fn">sudo</span> systemctl enable myapp      <span class="cm"># включить автозапуск</span>
+<span class="fn">sudo</span> systemctl start myapp       <span class="cm"># запустить сервис</span>
+<span class="fn">systemctl</span> status myapp           <span class="cm"># проверить состояние</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== СЕТЬ ===== -->
+            <div class="section">
+                <h2>Сеть в Linux</h2>
+
+                <p>Настройка и диагностика сети — одна из важнейших задач DevOps-инженера. Linux предоставляет обширный набор инструментов для работы с сетевыми интерфейсами, маршрутизацией, DNS и соединениями. Современные дистрибутивы используют пакет <code>iproute2</code> (команды <code>ip</code>, <code>ss</code>) вместо устаревших <code>ifconfig</code> и <code>netstat</code>, хотя последние всё ещё широко распространены в документации и скриптах.</p>
+
+                <p>Команда <code>ip addr</code> показывает все сетевые интерфейсы и их IP-адреса. Команда <code>ip route</code> отображает таблицу маршрутизации — правила, определяющие, куда отправлять пакеты для различных сетей. Для проверки доступности хоста используется <code>ping</code>, а для трассировки маршрута — <code>traceroute</code> (или <code>tracepath</code>). Утилита <code>ss</code> (socket statistics) показывает активные сетевые соединения и прослушиваемые порты — это первое, что проверяется при диагностике проблем с сервисами.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Сетевая диагностика</div>
+                    <pre><code><span class="fn">ip</span> addr show                   <span class="cm"># все интерфейсы и адреса</span>
+<span class="fn">ip</span> route show                  <span class="cm"># таблица маршрутизации</span>
+<span class="fn">ss</span> <span class="fl">-tulnp</span>                      <span class="cm"># прослушиваемые порты с именами процессов</span>
+<span class="fn">ss</span> <span class="fl">-s</span>                           <span class="cm"># сводная статистика соединений</span>
+<span class="fn">ping</span> <span class="fl">-c</span> 4 google.com            <span class="cm"># проверить доступность (4 пакета)</span>
+<span class="fn">traceroute</span> google.com          <span class="cm"># маршрут до хоста</span>
+<span class="fn">dig</span> example.com                <span class="cm"># DNS-запрос</span>
+<span class="fn">nslookup</span> example.com           <span class="cm"># DNS-запрос (альтернатива)</span>
+<span class="fn">curl</span> <span class="fl">-I</span> https://example.com    <span class="cm"># заголовки HTTP-ответа</span>
+<span class="fn">wget</span> <span class="fl">-q</span> <span class="fl">-O</span> - https://ifconfig.me  <span class="cm"># внешний IP-адрес</span></code></pre>
+                </div>
+
+                <p>Утилиты <code>curl</code> и <code>wget</code> — незаменимые инструменты для работы с HTTP. <code>curl</code> поддерживает множество протоколов и позволяет отправлять запросы любого типа (GET, POST, PUT, DELETE) с произвольными заголовками и телом — это делает его идеальным для тестирования API. <code>wget</code> больше подходит для загрузки файлов, особенно рекурсивной загрузки целых сайтов. Оба инструмента активно используются в скриптах автоматизации и CI/CD-пайплайнах.</p>
+
+                <div class="code-block">
+                    <div class="code-header">curl — работа с HTTP</div>
+                    <pre><code><span class="fn">curl</span> https://api.example.com/users              <span class="cm"># GET-запрос</span>
+<span class="fn">curl</span> <span class="fl">-X</span> POST <span class="fl">-H</span> <span class="st">"Content-Type: application/json"</span> \
+     <span class="fl">-d</span> <span class="st">'{"name":"test"}'</span> https://api.example.com/users  <span class="cm"># POST с JSON</span>
+<span class="fn">curl</span> <span class="fl">-o</span> file.tar.gz https://example.com/file.tar.gz   <span class="cm"># скачать файл</span>
+<span class="fn">curl</span> <span class="fl">-s</span> <span class="fl">-w</span> <span class="st">"%{http_code}"</span> <span class="fl">-o</span> /dev/null https://example.com  <span class="cm"># только HTTP-код ответа</span></code></pre>
+                </div>
+
+                <p>Конфигурация сети на уровне системы включает несколько важных файлов. Файл <code>/etc/hosts</code> позволяет задавать локальные DNS-записи — сопоставление имён хостов с IP-адресами без обращения к DNS-серверу. Файл <code>/etc/resolv.conf</code> определяет DNS-серверы, которые система использует для разрешения имён. Для защиты сервера используется файрвол. В Ubuntu рекомендуется <strong>UFW</strong> (Uncomplicated Firewall) — удобная обёртка над iptables, которая значительно упрощает настройку правил.</p>
+
+                <div class="code-block">
+                    <div class="code-header">UFW — базовая настройка файрвола</div>
+                    <pre><code><span class="fn">sudo</span> ufw status                <span class="cm"># текущее состояние</span>
+<span class="fn">sudo</span> ufw enable                 <span class="cm"># включить файрвол</span>
+<span class="fn">sudo</span> ufw allow 22               <span class="cm"># разрешить SSH</span>
+<span class="fn">sudo</span> ufw allow 80/tcp            <span class="cm"># разрешить HTTP</span>
+<span class="fn">sudo</span> ufw allow 443/tcp           <span class="cm"># разрешить HTTPS</span>
+<span class="fn">sudo</span> ufw deny 3306              <span class="cm"># запретить MySQL извне</span>
+<span class="fn">sudo</span> ufw allow from 10.0.0.0/24  <span class="cm"># разрешить подсеть</span>
+<span class="fn">sudo</span> ufw status numbered        <span class="cm"># пронумерованный список правил</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> всегда разрешайте SSH (порт 22) перед включением UFW, иначе вы потеряете доступ к серверу. Правило <code>sudo ufw allow 22</code> должно быть добавлено первым.
+                </div>
+            </div>
+
+            <!-- ===== УПРАВЛЕНИЕ ПАКЕТАМИ ===== -->
+            <div class="section">
+                <h2>Управление пакетами</h2>
+
+                <p>Управление пакетами — это способ установки, обновления и удаления программного обеспечения в Linux. В отличие от Windows, где программы скачиваются с сайтов в виде установщиков, в Linux ПО устанавливается из централизованных <strong>репозиториев</strong> — проверенных хранилищ пакетов, поддерживаемых дистрибутивом. Это обеспечивает безопасность (пакеты проверяются и подписываются), удобство (автоматическое разрешение зависимостей) и простоту обновления всей системы одной командой.</p>
+
+                <p>Каждое семейство дистрибутивов использует свой пакетный менеджер. Семейство Debian/Ubuntu использует <strong>apt</strong>, работающий с пакетами формата .deb. Семейство RHEL/CentOS/Rocky Linux использует <strong>dnf</strong> (ранее yum), работающий с пакетами .rpm. Alpine Linux, популярный в Docker-контейнерах, использует <strong>apk</strong>. Важно различать <code>update</code> (обновление списка доступных пакетов из репозиториев) и <code>upgrade</code> (установка новых версий уже установленных пакетов). Всегда запускайте <code>update</code> перед <code>install</code> или <code>upgrade</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">apt — Debian/Ubuntu</div>
+                    <pre><code><span class="fn">sudo</span> apt update                <span class="cm"># обновить список пакетов</span>
+<span class="fn">sudo</span> apt upgrade               <span class="cm"># обновить все установленные пакеты</span>
+<span class="fn">sudo</span> apt install nginx          <span class="cm"># установить пакет</span>
+<span class="fn">sudo</span> apt remove nginx           <span class="cm"># удалить пакет (конфигурация остаётся)</span>
+<span class="fn">sudo</span> apt purge nginx            <span class="cm"># удалить пакет с конфигурацией</span>
+<span class="fn">apt</span> search <span class="st">"web server"</span>         <span class="cm"># поиск пакета</span>
+<span class="fn">apt</span> show nginx                  <span class="cm"># информация о пакете</span>
+<span class="fn">dpkg</span> <span class="fl">-l</span> | <span class="fn">grep</span> nginx           <span class="cm"># проверить установлен ли пакет</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">dnf — RHEL/Rocky Linux</div>
+                    <pre><code><span class="fn">sudo</span> dnf check-update          <span class="cm"># проверить наличие обновлений</span>
+<span class="fn">sudo</span> dnf upgrade               <span class="cm"># обновить все пакеты</span>
+<span class="fn">sudo</span> dnf install nginx          <span class="cm"># установить пакет</span>
+<span class="fn">sudo</span> dnf remove nginx           <span class="cm"># удалить пакет</span>
+<span class="fn">dnf</span> search <span class="st">"web server"</span>         <span class="cm"># поиск пакета</span>
+<span class="fn">dnf</span> info nginx                  <span class="cm"># информация о пакете</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">apk — Alpine Linux (Docker)</div>
+                    <pre><code><span class="fn">apk</span> update                     <span class="cm"># обновить индекс</span>
+<span class="fn">apk</span> add nginx                   <span class="cm"># установить пакет</span>
+<span class="fn">apk</span> del nginx                   <span class="cm"># удалить пакет</span>
+<span class="fn">apk</span> add <span class="fl">--no-cache</span> curl         <span class="cm"># установить без кэширования (для Docker)</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практическое руководство</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы пройдём путь от установки Ubuntu Server до развёртывания простого веб-приложения с Nginx и системным сервисом. Это типичная задача, с которой сталкивается каждый DevOps-инженер в начале карьеры. По завершении вы будете иметь работающий сервер с веб-сервером и кастомным сервисом, управляемым через systemd.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 — Установка Ubuntu Server в VirtualBox</div>
+                    <p>Скачайте <a href="https://ubuntu.com/download/server" target="_blank">Ubuntu Server ISO</a> и <a href="https://www.virtualbox.org/" target="_blank">VirtualBox</a>. Создайте новую виртуальную машину: 2 ГБ RAM, 20 ГБ диска, сетевой адаптер в режиме «Сетевой мост» (Bridged Adapter) — это даст VM собственный IP-адрес в вашей сети. При установке Ubuntu выберите минимальную серверную установку и обязательно отметьте установку OpenSSH Server.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 — Настройка SSH-доступа</div>
+                    <p>После установки узнайте IP-адрес виртуальной машины и подключитесь к ней по SSH с основной системы. Настройте авторизацию по ключам вместо паролей — это стандартная практика безопасности.</p>
+                    <div class="code-block">
+                        <div class="code-header">На виртуальной машине</div>
+                        <pre><code><span class="fn">ip</span> addr show                   <span class="cm"># узнать IP-адрес (ищите inet на интерфейсе enp0s3 или аналогичном)</span></code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">На вашей основной машине</div>
+                        <pre><code><span class="fn">ssh-keygen</span> <span class="fl">-t</span> ed25519          <span class="cm"># сгенерировать ключ (если ещё нет)</span>
+<span class="fn">ssh-copy-id</span> user@192.168.1.100 <span class="cm"># скопировать публичный ключ на сервер</span>
+<span class="fn">ssh</span> user@192.168.1.100          <span class="cm"># подключиться (теперь без пароля)</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 — Установка и настройка Nginx</div>
+                    <p>Установите веб-сервер Nginx, проверьте его работу и настройте базовую страницу. Nginx — самый популярный веб-сервер и обратный прокси в мире DevOps.</p>
+                    <div class="code-block">
+                        <div class="code-header">Установка Nginx</div>
+                        <pre><code><span class="fn">sudo</span> apt update
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> nginx
+<span class="fn">sudo</span> systemctl status nginx     <span class="cm"># проверить, что запущен</span>
+<span class="fn">curl</span> http://localhost            <span class="cm"># должен вернуть HTML страницу Nginx</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 — Создание простого приложения</div>
+                    <p>Создадим простое Python-приложение, которое будет работать как HTTP-сервер на порту 8080. Это имитирует реальное веб-приложение, которое мы затем обернём в systemd-сервис.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание приложения</div>
+                        <pre><code><span class="fn">sudo</span> mkdir <span class="fl">-p</span> /opt/myapp
+<span class="fn">sudo</span> chown $USER: /opt/myapp
+
+<span class="fn">cat</span> &gt; /opt/myapp/server.py &lt;&lt; <span class="st">'EOF'</span>
+<span class="kw">from</span> http.server <span class="kw">import</span> HTTPServer, BaseHTTPRequestHandler
+
+<span class="kw">class</span> <span class="fn">Handler</span>(BaseHTTPRequestHandler):
+    <span class="kw">def</span> <span class="fn">do_GET</span>(self):
+        self.send_response(200)
+        self.send_header(<span class="st">"Content-Type"</span>, <span class="st">"text/plain"</span>)
+        self.end_headers()
+        self.wfile.write(<span class="st">b"Hello from myapp!\n"</span>)
+
+HTTPServer((<span class="st">""</span>, 8080), Handler).serve_forever()
+<span class="st">EOF</span>
+
+<span class="fn">python3</span> /opt/myapp/server.py &amp;   <span class="cm"># тест — запустить и проверить</span>
+<span class="fn">curl</span> http://localhost:8080        <span class="cm"># должен вывести "Hello from myapp!"</span>
+<span class="fn">kill</span> %1                          <span class="cm"># остановить тестовый запуск</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 — Создание systemd-сервиса</div>
+                    <p>Оформим приложение как системный сервис, чтобы оно автоматически запускалось при загрузке и перезапускалось при падении.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание unit-файла</div>
+                        <pre><code><span class="fn">sudo</span> cat &gt; /etc/systemd/system/myapp.service &lt;&lt; <span class="st">'EOF'</span>
+[Unit]
+Description=My Python Web App
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/myapp
+ExecStart=/usr/bin/python3 /opt/myapp/server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+<span class="st">EOF</span>
+
+<span class="cm"># Создать пользователя deploy (если не существует)</span>
+<span class="fn">sudo</span> useradd <span class="fl">-r</span> <span class="fl">-s</span> /usr/sbin/nologin deploy
+<span class="fn">sudo</span> chown <span class="fl">-R</span> deploy: /opt/myapp
+
+<span class="cm"># Активировать сервис</span>
+<span class="fn">sudo</span> systemctl daemon-reload
+<span class="fn">sudo</span> systemctl enable <span class="fl">--now</span> myapp
+<span class="fn">systemctl</span> status myapp         <span class="cm"># проверить статус</span>
+<span class="fn">curl</span> http://localhost:8080       <span class="cm"># проверить работу</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 6 — Настройка Nginx как обратного прокси</div>
+                    <p>Настроим Nginx для проксирования запросов к нашему приложению. Это стандартная архитектура: Nginx принимает внешние запросы на порту 80 и перенаправляет их к приложению на внутреннем порту 8080.</p>
+                    <div class="code-block">
+                        <div class="code-header">Конфигурация Nginx</div>
+                        <pre><code><span class="fn">sudo</span> cat &gt; /etc/nginx/sites-available/myapp &lt;&lt; <span class="st">'EOF'</span>
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+<span class="st">EOF</span>
+
+<span class="fn">sudo</span> rm /etc/nginx/sites-enabled/default
+<span class="fn">sudo</span> ln <span class="fl">-s</span> /etc/nginx/sites-available/myapp /etc/nginx/sites-enabled/
+<span class="fn">sudo</span> nginx <span class="fl">-t</span>                    <span class="cm"># проверить синтаксис конфигурации</span>
+<span class="fn">sudo</span> systemctl reload nginx      <span class="cm"># применить конфигурацию</span>
+<span class="fn">curl</span> http://localhost             <span class="cm"># теперь порт 80 проксирует к приложению</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> у вас есть полноценный сервер с Nginx как обратным прокси, Python-приложением в качестве бэкенда и systemd-сервисом для управления жизненным циклом приложения. Это базовая архитектура, которую можно масштабировать и дополнять: добавить SSL (Certbot), мониторинг (Prometheus), CI/CD-деплой.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Создайте пользователя <code>devops</code>, добавьте его в группу <code>sudo</code>, настройте SSH-доступ по ключу и запретите вход по паролю в <code>/etc/ssh/sshd_config</code>.</li>
+                    <li>Напишите команду <code>find</code>, которая найдёт все файлы в <code>/var/log</code> больше 10 МБ, старше 30 дней, и выведет их размер в удобном формате. Затем удалите их (с подтверждением).</li>
+                    <li>Создайте systemd-сервис для Bash-скрипта, который каждые 60 секунд записывает использование диска (<code>df -h</code>) в файл <code>/var/log/disk-usage.log</code>. Настройте systemd timer вместо cron.</li>
+                    <li>Настройте UFW так, чтобы разрешить SSH (22), HTTP (80), HTTPS (443), запретить всё остальное входящее, но разрешить весь исходящий трафик. Проверьте правила командой <code>ufw status verbose</code>.</li>
+                    <li>Установите Nginx, настройте два виртуальных хоста (<code>site1.local</code> и <code>site2.local</code>), каждый с отдельной директорией и index.html. Проверьте работу через <code>curl -H "Host: site1.local" http://localhost</code>.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://linuxjourney.com/" target="_blank">Linux Journey</a>
+                        <div class="res-desc">Интерактивный курс по Linux от основ до продвинутых тем — отличная отправная точка</div>
+                    </li>
+                    <li>
+                        <a href="https://overthewire.org/wargames/bandit/" target="_blank">OverTheWire: Bandit</a>
+                        <div class="res-desc">Практические задания по Linux в формате игры — учитесь взламывая уровни через SSH</div>
+                    </li>
+                    <li>
+                        <a href="https://www.kernel.org/doc/html/latest/" target="_blank">The Linux Kernel documentation</a>
+                        <div class="res-desc">Официальная документация ядра Linux для глубокого понимания системы</div>
+                    </li>
+                    <li>
+                        <a href="https://losst.pro/" target="_blank">Losst.pro</a>
+                        <div class="res-desc">Статьи и руководства по Linux на русском языке — от базовых команд до серверной администрации</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="linux">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div></div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="network.html" class="nav-title">Сети &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ansible — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Ansible</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Ansible</h1>
+            <p class="subtitle">Управление конфигурацией и автоматизация инфраструктуры без агентов</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Что такое Ansible и зачем он нужен</h2>
+
+                <p>Ansible — это инструмент для автоматизации управления конфигурацией, развёртывания приложений и оркестрации инфраструктуры. Он был создан Майклом Де Хааном в 2012 году, а в 2015 году приобретён компанией Red Hat. Сегодня Ansible входит в число самых популярных DevOps-инструментов и используется в организациях любого масштаба — от стартапов до корпораций уровня Fortune 500. Главная идея Ansible — описать желаемое состояние инфраструктуры в понятных YAML-файлах, а инструмент сам приведёт серверы к этому состоянию.</p>
+
+                <p>Популярность Ansible объясняется несколькими ключевыми особенностями. Во-первых, он <strong>безагентный (agentless)</strong> — на управляемых серверах не нужно устанавливать никакого дополнительного ПО, достаточно SSH-доступа и Python. Во-вторых, все конфигурации описываются на <strong>YAML</strong> — простом и читаемом языке, который не требует навыков программирования. В-третьих, Ansible <strong>идемпотентен</strong>: повторный запуск одного и того же плейбука не изменит систему, если она уже находится в желаемом состоянии. Это критически важное свойство, позволяющее безопасно запускать автоматизацию сколько угодно раз без побочных эффектов.</p>
+
+                <p>В мире управления конфигурацией существует несколько конкурирующих инструментов, и понимание их различий помогает сделать осознанный выбор.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Характеристика</th>
+                                <th>Ansible</th>
+                                <th>Chef</th>
+                                <th>Puppet</th>
+                                <th>Salt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Агент</td>
+                                <td>Не требуется</td>
+                                <td>Требуется</td>
+                                <td>Требуется</td>
+                                <td>Опционально</td>
+                            </tr>
+                            <tr>
+                                <td>Язык описания</td>
+                                <td>YAML</td>
+                                <td>Ruby DSL</td>
+                                <td>Puppet DSL</td>
+                                <td>YAML</td>
+                            </tr>
+                            <tr>
+                                <td>Архитектура</td>
+                                <td>Push (по умолчанию)</td>
+                                <td>Pull</td>
+                                <td>Pull</td>
+                                <td>Push и Pull</td>
+                            </tr>
+                            <tr>
+                                <td>Порог входа</td>
+                                <td>Низкий</td>
+                                <td>Высокий</td>
+                                <td>Средний</td>
+                                <td>Средний</td>
+                            </tr>
+                            <tr>
+                                <td>Масштабируемость</td>
+                                <td>Средняя (без AWX)</td>
+                                <td>Высокая</td>
+                                <td>Высокая</td>
+                                <td>Высокая</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Ansible идеально подходит для следующих сценариев: первоначальная настройка серверов (provisioning), развёртывание приложений, управление конфигурациями нескольких серверов одновременно, оркестрация сложных многоэтапных процессов (например, rolling update), а также для создания воспроизводимых окружений разработки. Если вам нужно быстро начать автоматизировать инфраструктуру без сложной инфраструктуры самого инструмента — Ansible будет лучшим выбором.</p>
+            </div>
+
+            <!-- ===== АРХИТЕКТУРА ===== -->
+            <div class="section">
+                <div class="section-label">Основы</div>
+                <h2>Архитектура</h2>
+
+                <p>Архитектура Ansible предельно проста и состоит из двух типов узлов: <strong>управляющего узла (control node)</strong> и <strong>управляемых узлов (managed nodes)</strong>. Управляющий узел — это машина, на которой установлен Ansible и с которой запускаются команды и плейбуки. Управляемые узлы — это серверы, которыми вы управляете. На них не устанавливается никакое дополнительное ПО — Ansible подключается к ним по SSH (или WinRM для Windows) и выполняет необходимые действия.</p>
+
+                <p>При запуске плейбука Ansible генерирует Python-скрипты на управляющем узле, копирует их на управляемые узлы через SSH, выполняет их там и возвращает результаты обратно. После выполнения временные файлы автоматически удаляются. Именно поэтому на управляемых узлах требуется наличие <strong>Python</strong> (версии 2.7 или 3.5+) — без него Ansible не сможет выполнять большинство модулей. Единственное исключение — модуль <code>raw</code>, который выполняет команды напрямую через SSH без Python.</p>
+
+                <p>Начиная с Ansible 2.10, экосистема разделена на <strong>ansible-core</strong> (ядро с минимальным набором модулей) и <strong>Ansible Collections</strong> (коллекции модулей, плагинов и ролей, распространяемые через Ansible Galaxy). Это позволяет устанавливать только те модули, которые вам действительно нужны, а сообщество может выпускать обновления коллекций независимо от релизов ядра. Например, коллекция <code>amazon.aws</code> содержит модули для работы с AWS, а <code>community.docker</code> — для управления Docker-контейнерами.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Установка Ansible</div>
+                    <pre><code><span class="cm"># Установка через pip (рекомендуемый способ)</span>
+<span class="fn">pip3</span> install ansible
+
+<span class="cm"># Установка только ядра (без коллекций)</span>
+<span class="fn">pip3</span> install ansible-core
+
+<span class="cm"># Установка на Ubuntu через APT</span>
+<span class="fn">sudo</span> apt update
+<span class="fn">sudo</span> apt install <span class="fl">-y</span> ansible
+
+<span class="cm"># Проверка версии</span>
+<span class="fn">ansible</span> <span class="fl">--version</span>
+
+<span class="cm"># Установка коллекции</span>
+<span class="fn">ansible-galaxy</span> collection install amazon.aws
+<span class="fn">ansible-galaxy</span> collection install community.docker</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> Ansible работает только на Linux/macOS в качестве управляющего узла. Windows может быть только управляемым узлом (через WinRM). Если вы работаете на Windows, используйте WSL2 для запуска Ansible.
+                </div>
+            </div>
+
+            <!-- ===== INVENTORY ===== -->
+            <div class="section">
+                <div class="section-label">Инфраструктура</div>
+                <h2>Inventory</h2>
+
+                <p>Inventory (инвентарь) — это файл или набор файлов, описывающих управляемые серверы: их адреса, группы, к которым они принадлежат, и переменные, специфичные для каждого хоста или группы. Без инвентаря Ansible не знает, к каким серверам подключаться. По умолчанию Ansible ищет инвентарь в файле <code>/etc/ansible/hosts</code>, но на практике инвентарь обычно хранится в директории проекта и указывается явно через флаг <code>-i</code>.</p>
+
+                <p>Существует два формата статического инвентаря: <strong>INI</strong> (традиционный) и <strong>YAML</strong> (более гибкий). Оба формата поддерживают группировку хостов, вложенные группы и назначение переменных. Группировка — мощный механизм, позволяющий применять разные конфигурации к разным наборам серверов. Например, веб-серверы могут требовать Nginx, серверы баз данных — PostgreSQL, а все серверы — общую конфигурацию безопасности.</p>
+
+                <div class="code-block">
+                    <div class="code-header">inventory.ini — формат INI</div>
+                    <pre><code><span class="cm"># Отдельные хосты</span>
+<span class="st">mail.example.com</span>
+
+<span class="cm"># Группа веб-серверов</span>
+<span class="kw">[webservers]</span>
+<span class="st">web1.example.com</span> <span class="fn">ansible_port</span>=<span class="fl">2222</span>
+<span class="st">web2.example.com</span>
+<span class="st">web3.example.com</span>
+
+<span class="cm"># Группа серверов баз данных</span>
+<span class="kw">[dbservers]</span>
+<span class="st">db1.example.com</span>
+<span class="st">db2.example.com</span>
+
+<span class="cm"># Переменные для группы</span>
+<span class="kw">[webservers:vars]</span>
+<span class="fn">http_port</span>=<span class="fl">80</span>
+<span class="fn">ansible_user</span>=<span class="st">deploy</span>
+
+<span class="cm"># Дочерняя группа (webservers и dbservers входят в production)</span>
+<span class="kw">[production:children]</span>
+<span class="st">webservers</span>
+<span class="st">dbservers</span>
+
+<span class="cm"># Диапазон хостов</span>
+<span class="kw">[staging]</span>
+<span class="st">staging-[01:05].example.com</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">inventory.yml — формат YAML</div>
+                    <pre><code><span class="kw">all</span>:
+  <span class="kw">children</span>:
+    <span class="kw">webservers</span>:
+      <span class="kw">hosts</span>:
+        <span class="st">web1.example.com</span>:
+          <span class="fn">ansible_port</span>: <span class="fl">2222</span>
+        <span class="st">web2.example.com</span>:
+        <span class="st">web3.example.com</span>:
+      <span class="kw">vars</span>:
+        <span class="fn">http_port</span>: <span class="fl">80</span>
+        <span class="fn">ansible_user</span>: <span class="st">deploy</span>
+    <span class="kw">dbservers</span>:
+      <span class="kw">hosts</span>:
+        <span class="st">db1.example.com</span>:
+        <span class="st">db2.example.com</span>:
+    <span class="kw">production</span>:
+      <span class="kw">children</span>:
+        <span class="st">webservers</span>:
+        <span class="st">dbservers</span>:</code></pre>
+                </div>
+
+                <p>Помимо переменных, определённых непосредственно в инвентаре, Ansible поддерживает отдельные файлы переменных. Если рядом с инвентарём создать директории <code>group_vars/</code> и <code>host_vars/</code>, Ansible автоматически загрузит переменные из файлов, имена которых совпадают с именами групп или хостов. Например, файл <code>group_vars/webservers.yml</code> будет применён ко всем хостам в группе <code>webservers</code>, а файл <code>host_vars/db1.example.com.yml</code> — только к хосту <code>db1.example.com</code>.</p>
+
+                <p><strong>Динамический инвентарь</strong> — это скрипт или плагин, который автоматически получает список серверов из внешнего источника: облачного провайдера (AWS EC2, GCP, Azure), системы управления виртуализацией (VMware, OpenStack), CMDB или любого API. Это критически важно для облачных сред, где серверы создаются и уничтожаются динамически. Ansible поддерживает плагины динамического инвентаря для всех основных облачных платформ.</p>
+
+                <div class="code-block">
+                    <div class="code-header">aws_ec2.yml — динамический инвентарь AWS</div>
+                    <pre><code><span class="kw">plugin</span>: <span class="st">amazon.aws.aws_ec2</span>
+<span class="kw">regions</span>:
+  - <span class="st">us-east-1</span>
+  - <span class="st">eu-west-1</span>
+<span class="kw">filters</span>:
+  <span class="fn">tag:Environment</span>: <span class="st">production</span>
+  <span class="fn">instance-state-name</span>: <span class="st">running</span>
+<span class="kw">keyed_groups</span>:
+  - <span class="kw">key</span>: <span class="st">tags.Role</span>
+    <span class="kw">prefix</span>: <span class="st">role</span>
+  - <span class="kw">key</span>: <span class="st">placement.region</span>
+    <span class="kw">prefix</span>: <span class="st">aws_region</span></code></pre>
+                </div>
+
+                <p>Для выбора конкретных хостов из инвентаря используются <strong>паттерны</strong>. Вы можете указать имя хоста, имя группы, несколько групп через двоеточие, а также использовать символы подстановки и операции пересечения/исключения.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Паттерны выбора хостов</div>
+                    <pre><code><span class="cm"># Все хосты</span>
+<span class="fn">ansible</span> <span class="st">all</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping
+
+<span class="cm"># Конкретная группа</span>
+<span class="fn">ansible</span> <span class="st">webservers</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping
+
+<span class="cm"># Несколько групп (OR — объединение)</span>
+<span class="fn">ansible</span> <span class="st">'webservers:dbservers'</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping
+
+<span class="cm"># Пересечение групп (AND — хосты в обеих группах)</span>
+<span class="fn">ansible</span> <span class="st">'production:&amp;webservers'</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping
+
+<span class="cm"># Исключение (NOT — все из production кроме dbservers)</span>
+<span class="fn">ansible</span> <span class="st">'production:!dbservers'</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping
+
+<span class="cm"># Подстановочные символы</span>
+<span class="fn">ansible</span> <span class="st">'web*.example.com'</span> <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> ping</code></pre>
+                </div>
+            </div>
+
+            <!-- ===== AD-HOC КОМАНДЫ ===== -->
+            <div class="section">
+                <div class="section-label">Быстрые действия</div>
+                <h2>Ad-hoc команды</h2>
+
+                <p>Ad-hoc команды — это способ выполнить одноразовое действие на одном или нескольких серверах без написания плейбука. Они идеально подходят для быстрых задач: проверить доступность серверов, перезапустить сервис, скопировать файл, получить информацию о системе. Формат команды: <code>ansible &lt;паттерн&gt; -i &lt;инвентарь&gt; -m &lt;модуль&gt; -a &lt;аргументы&gt;</code>.</p>
+
+                <p>Ansible использует <strong>модули</strong> — самодостаточные единицы кода, каждая из которых отвечает за определённую задачу. Существуют тысячи модулей: для управления пакетами, файлами, сервисами, пользователями, облачными ресурсами и многим другим. Каждый модуль принимает набор параметров и возвращает результат в формате JSON. Важно понимать разницу между модулями <code>command</code> и <code>shell</code>: первый выполняет команду напрямую, без обработки shell-конструкций (пайпов, перенаправлений), а второй — через оболочку <code>/bin/sh</code>, поддерживая все её возможности.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Примеры ad-hoc команд</div>
+                    <pre><code><span class="cm"># Проверка связи со всеми хостами (модуль ping)</span>
+<span class="fn">ansible</span> all <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">ping</span>
+
+<span class="cm"># Выполнить команду на веб-серверах</span>
+<span class="fn">ansible</span> webservers <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">command</span> <span class="fl">-a</span> <span class="st">"uptime"</span>
+
+<span class="cm"># Выполнить команду через shell (с пайпом)</span>
+<span class="fn">ansible</span> all <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">shell</span> <span class="fl">-a</span> <span class="st">"df -h | grep /dev/sda"</span>
+
+<span class="cm"># Скопировать файл на все серверы</span>
+<span class="fn">ansible</span> all <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">copy</span> <span class="fl">-a</span> <span class="st">"src=/local/file.conf dest=/etc/app/file.conf owner=root mode=0644"</span>
+
+<span class="cm"># Создать директорию</span>
+<span class="fn">ansible</span> all <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">file</span> <span class="fl">-a</span> <span class="st">"path=/opt/app state=directory owner=deploy mode=0755"</span>
+
+<span class="cm"># Установить пакет (Ubuntu/Debian)</span>
+<span class="fn">ansible</span> webservers <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">apt</span> <span class="fl">-a</span> <span class="st">"name=nginx state=present"</span> <span class="fl">-b</span>
+
+<span class="cm"># Перезапустить сервис (флаг -b для sudo)</span>
+<span class="fn">ansible</span> webservers <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">service</span> <span class="fl">-a</span> <span class="st">"name=nginx state=restarted"</span> <span class="fl">-b</span>
+
+<span class="cm"># Собрать факты о системе</span>
+<span class="fn">ansible</span> web1.example.com <span class="fl">-i</span> inventory.ini <span class="fl">-m</span> <span class="st">setup</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Совет:</strong> флаг <code>-b</code> (или <code>--become</code>) активирует повышение привилегий (по умолчанию через sudo). Флаг <code>-K</code> (или <code>--ask-become-pass</code>) запросит пароль sudo. Для проверки действий без реального выполнения используйте <code>--check</code> (dry run).
+                </div>
+            </div>
+
+            <!-- ===== PLAYBOOKS ===== -->
+            <div class="section">
+                <div class="section-label">Автоматизация</div>
+                <h2>Playbooks</h2>
+
+                <p>Playbook (плейбук) — это основной формат описания автоматизации в Ansible. Плейбук представляет собой YAML-файл, содержащий один или несколько <strong>play</strong> (сценариев). Каждый play определяет: на каких хостах выполнять действия, от имени какого пользователя, и какой список задач (tasks) выполнить. Задачи выполняются последовательно, сверху вниз, на всех указанных хостах одновременно. Если задача завершается с ошибкой на каком-либо хосте, этот хост исключается из дальнейшего выполнения.</p>
+
+                <div class="code-block">
+                    <div class="code-header">playbook.yml — базовая структура</div>
+                    <pre><code><span class="cm">---</span>
+<span class="cm"># Первый play — настройка веб-серверов</span>
+- <span class="kw">name</span>: <span class="st">Настройка веб-серверов</span>
+  <span class="kw">hosts</span>: <span class="st">webservers</span>
+  <span class="kw">become</span>: <span class="fl">true</span>
+  <span class="kw">vars</span>:
+    <span class="fn">http_port</span>: <span class="fl">80</span>
+    <span class="fn">app_name</span>: <span class="st">myapp</span>
+
+  <span class="kw">tasks</span>:
+    - <span class="kw">name</span>: <span class="st">Установить Nginx</span>
+      <span class="fn">ansible.builtin.apt</span>:
+        <span class="fn">name</span>: <span class="st">nginx</span>
+        <span class="fn">state</span>: <span class="st">present</span>
+        <span class="fn">update_cache</span>: <span class="fl">true</span>
+
+    - <span class="kw">name</span>: <span class="st">Скопировать конфигурацию</span>
+      <span class="fn">ansible.builtin.template</span>:
+        <span class="fn">src</span>: <span class="st">nginx.conf.j2</span>
+        <span class="fn">dest</span>: <span class="st">/etc/nginx/sites-available/{{ app_name }}</span>
+        <span class="fn">owner</span>: <span class="st">root</span>
+        <span class="fn">mode</span>: <span class="st">'0644'</span>
+      <span class="kw">notify</span>: <span class="st">Перезагрузить Nginx</span>
+
+    - <span class="kw">name</span>: <span class="st">Убедиться, что Nginx запущен</span>
+      <span class="fn">ansible.builtin.service</span>:
+        <span class="fn">name</span>: <span class="st">nginx</span>
+        <span class="fn">state</span>: <span class="st">started</span>
+        <span class="fn">enabled</span>: <span class="fl">true</span>
+
+  <span class="kw">handlers</span>:
+    - <span class="kw">name</span>: <span class="st">Перезагрузить Nginx</span>
+      <span class="fn">ansible.builtin.service</span>:
+        <span class="fn">name</span>: <span class="st">nginx</span>
+        <span class="fn">state</span>: <span class="st">reloaded</span></code></pre>
+                </div>
+
+                <p><strong>Handlers (обработчики)</strong> — это особый вид задач, которые выполняются только при получении уведомления (notify) от другой задачи. Причём handler выполнится только один раз в конце play, даже если его вызвали несколько задач. Типичный пример — перезагрузка сервиса после изменения конфигурации. Без handler пришлось бы перезагружать сервис после каждого изменения, а с ним перезагрузка произойдёт только если конфигурация действительно изменилась.</p>
+
+                <h3>Переменные</h3>
+
+                <p>Переменные в Ansible могут быть определены на множестве уровней, и существует строгий <strong>порядок приоритетов</strong> (от низшего к высшему): defaults роли, переменные инвентаря, group_vars, host_vars, переменные play (vars), переменные задачи, аргументы командной строки (<code>-e</code>). Переменные используются через синтаксис Jinja2: <code>{{ variable_name }}</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Способы определения переменных</div>
+                    <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Демонстрация переменных</span>
+  <span class="kw">hosts</span>: <span class="st">webservers</span>
+  <span class="kw">become</span>: <span class="fl">true</span>
+
+  <span class="cm"># Переменные прямо в play</span>
+  <span class="kw">vars</span>:
+    <span class="fn">app_port</span>: <span class="fl">8080</span>
+    <span class="fn">packages</span>:
+      - <span class="st">nginx</span>
+      - <span class="st">curl</span>
+      - <span class="st">htop</span>
+
+  <span class="cm"># Переменные из файлов</span>
+  <span class="kw">vars_files</span>:
+    - <span class="st">vars/common.yml</span>
+    - <span class="st">vars/{{ env }}.yml</span>
+
+  <span class="kw">tasks</span>:
+    - <span class="kw">name</span>: <span class="st">Вывести переменные</span>
+      <span class="fn">ansible.builtin.debug</span>:
+        <span class="fn">msg</span>: <span class="st">"Порт: {{ app_port }}, ОС: {{ ansible_distribution }}"</span>
+
+    - <span class="kw">name</span>: <span class="st">Использовать переменную из командной строки</span>
+      <span class="fn">ansible.builtin.debug</span>:
+        <span class="fn">msg</span>: <span class="st">"Окружение: {{ env }}"</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Запуск с переменной из командной строки</div>
+                    <pre><code><span class="fn">ansible-playbook</span> playbook.yml <span class="fl">-e</span> <span class="st">"env=production"</span>
+<span class="fn">ansible-playbook</span> playbook.yml <span class="fl">-e</span> <span class="st">'{"env": "staging", "debug": true}'</span></code></pre>
+                </div>
+
+                <h3>Факты (Facts)</h3>
+
+                <p>Ansible автоматически собирает <strong>факты</strong> о каждом управляемом узле перед выполнением задач: операционная система, IP-адреса, объём памяти, количество процессоров, монтированные диски и сотни других параметров. Эти данные доступны как переменные с префиксом <code>ansible_</code>. Сбор фактов можно отключить директивой <code>gather_facts: false</code> для ускорения выполнения, если они не нужны.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с фактами</div>
+                    <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Использование фактов</span>
+  <span class="kw">hosts</span>: <span class="st">all</span>
+  <span class="kw">gather_facts</span>: <span class="fl">true</span>
+
+  <span class="kw">tasks</span>:
+    - <span class="kw">name</span>: <span class="st">Показать информацию о системе</span>
+      <span class="fn">ansible.builtin.debug</span>:
+        <span class="fn">msg</span>: |
+          <span class="st">ОС: {{ ansible_distribution }} {{ ansible_distribution_version }}</span>
+          <span class="st">Ядро: {{ ansible_kernel }}</span>
+          <span class="st">CPU: {{ ansible_processor_vcpus }}</span>
+          <span class="st">RAM: {{ ansible_memtotal_mb }} MB</span>
+          <span class="st">IP: {{ ansible_default_ipv4.address }}</span>
+
+    <span class="cm"># Установить пакет в зависимости от ОС</span>
+    - <span class="kw">name</span>: <span class="st">Установить Apache (Debian/Ubuntu)</span>
+      <span class="fn">ansible.builtin.apt</span>:
+        <span class="fn">name</span>: <span class="st">apache2</span>
+        <span class="fn">state</span>: <span class="st">present</span>
+      <span class="kw">when</span>: <span class="st">ansible_os_family == "Debian"</span>
+
+    - <span class="kw">name</span>: <span class="st">Установить Apache (RedHat/CentOS)</span>
+      <span class="fn">ansible.builtin.yum</span>:
+        <span class="fn">name</span>: <span class="st">httpd</span>
+        <span class="fn">state</span>: <span class="st">present</span>
+      <span class="kw">when</span>: <span class="st">ansible_os_family == "RedHat"</span></code></pre>
+                </div>
+
+                <h3>Условия и циклы</h3>
+
+                <p>Директива <code>when</code> позволяет выполнять задачу только при соблюдении условия. Условие записывается как выражение Jinja2 (без двойных фигурных скобок). Можно использовать логические операторы <code>and</code>, <code>or</code>, <code>not</code>, операции сравнения и проверки на принадлежность к списку (<code>in</code>). Циклы реализуются через директиву <code>loop</code> (современный способ) или <code>with_items</code> (устаревший, но часто встречающийся). Текущий элемент цикла доступен через переменную <code>{{ item }}</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Условия и циклы</div>
+                    <pre><code><span class="kw">tasks</span>:
+  <span class="cm"># Условие when</span>
+  - <span class="kw">name</span>: <span class="st">Установить пакеты только на Ubuntu 22.04+</span>
+    <span class="fn">ansible.builtin.apt</span>:
+      <span class="fn">name</span>: <span class="st">htop</span>
+      <span class="fn">state</span>: <span class="st">present</span>
+    <span class="kw">when</span>:
+      - <span class="st">ansible_distribution == "Ubuntu"</span>
+      - <span class="st">ansible_distribution_major_version | int >= 22</span>
+
+  <span class="cm"># Цикл loop</span>
+  - <span class="kw">name</span>: <span class="st">Установить список пакетов</span>
+    <span class="fn">ansible.builtin.apt</span>:
+      <span class="fn">name</span>: <span class="st">"{{ item }}"</span>
+      <span class="fn">state</span>: <span class="st">present</span>
+    <span class="kw">loop</span>:
+      - <span class="st">nginx</span>
+      - <span class="st">curl</span>
+      - <span class="st">git</span>
+      - <span class="st">htop</span>
+
+  <span class="cm"># Цикл со словарями</span>
+  - <span class="kw">name</span>: <span class="st">Создать пользователей</span>
+    <span class="fn">ansible.builtin.user</span>:
+      <span class="fn">name</span>: <span class="st">"{{ item.name }}"</span>
+      <span class="fn">groups</span>: <span class="st">"{{ item.groups }}"</span>
+      <span class="fn">state</span>: <span class="st">present</span>
+    <span class="kw">loop</span>:
+      - { <span class="fn">name</span>: <span class="st">deploy</span>, <span class="fn">groups</span>: <span class="st">www-data</span> }
+      - { <span class="fn">name</span>: <span class="st">monitoring</span>, <span class="fn">groups</span>: <span class="st">adm</span> }</code></pre>
+                </div>
+
+                <h3>Теги</h3>
+
+                <p>Теги позволяют маркировать задачи и запускать только определённое подмножество из плейбука. Это экономит время: вместо запуска всего плейбука можно выполнить только задачи с нужным тегом. Теги назначаются директивой <code>tags</code> и используются при запуске через флаги <code>--tags</code> и <code>--skip-tags</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Использование тегов</div>
+                    <pre><code><span class="kw">tasks</span>:
+  - <span class="kw">name</span>: <span class="st">Установить пакеты</span>
+    <span class="fn">ansible.builtin.apt</span>:
+      <span class="fn">name</span>: <span class="st">nginx</span>
+      <span class="fn">state</span>: <span class="st">present</span>
+    <span class="kw">tags</span>:
+      - <span class="st">packages</span>
+      - <span class="st">nginx</span>
+
+  - <span class="kw">name</span>: <span class="st">Настроить конфигурацию</span>
+    <span class="fn">ansible.builtin.template</span>:
+      <span class="fn">src</span>: <span class="st">nginx.conf.j2</span>
+      <span class="fn">dest</span>: <span class="st">/etc/nginx/nginx.conf</span>
+    <span class="kw">tags</span>: <span class="st">config</span>
+
+<span class="cm"># Запуск:</span>
+<span class="cm"># ansible-playbook playbook.yml --tags "config"</span>
+<span class="cm"># ansible-playbook playbook.yml --skip-tags "packages"</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ROLES ===== -->
+            <div class="section">
+                <div class="section-label">Организация кода</div>
+                <h2>Roles</h2>
+
+                <p>По мере роста автоматизации плейбуки становятся всё длиннее и сложнее. <strong>Роли (Roles)</strong> решают эту проблему, предоставляя стандартный способ структурирования Ansible-кода. Роль — это логически завершённый набор задач, обработчиков, шаблонов, файлов и переменных, объединённых для выполнения конкретной функции (например, «настроить Nginx» или «установить PostgreSQL»). Роли можно переиспользовать в разных проектах, делиться ими через Ansible Galaxy и тестировать независимо.</p>
+
+                <p>Каждая роль имеет фиксированную структуру директорий. Ansible автоматически загружает файлы <code>main.yml</code> из каждой поддиректории. Не все директории обязательны — создавайте только те, которые нужны.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Структура директорий роли</div>
+                    <pre><code>roles/
+  nginx/
+    <span class="fn">tasks/</span>
+      main.yml          <span class="cm"># основные задачи роли</span>
+      install.yml        <span class="cm"># подзадачи (подключаются через include_tasks)</span>
+      configure.yml
+    <span class="fn">handlers/</span>
+      main.yml          <span class="cm"># обработчики (напр. перезагрузка сервиса)</span>
+    <span class="fn">templates/</span>
+      nginx.conf.j2     <span class="cm"># шаблоны Jinja2</span>
+      vhost.conf.j2
+    <span class="fn">files/</span>
+      ssl-params.conf   <span class="cm"># статические файлы для копирования</span>
+    <span class="fn">vars/</span>
+      main.yml          <span class="cm"># переменные роли (высокий приоритет)</span>
+    <span class="fn">defaults/</span>
+      main.yml          <span class="cm"># значения по умолчанию (низший приоритет)</span>
+    <span class="fn">meta/</span>
+      main.yml          <span class="cm"># зависимости роли и метаданные</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">roles/nginx/tasks/main.yml</div>
+                    <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Установить Nginx</span>
+  <span class="fn">ansible.builtin.apt</span>:
+    <span class="fn">name</span>: <span class="st">nginx</span>
+    <span class="fn">state</span>: <span class="st">present</span>
+    <span class="fn">update_cache</span>: <span class="fl">true</span>
+
+- <span class="kw">name</span>: <span class="st">Скопировать основную конфигурацию</span>
+  <span class="fn">ansible.builtin.template</span>:
+    <span class="fn">src</span>: <span class="st">nginx.conf.j2</span>
+    <span class="fn">dest</span>: <span class="st">/etc/nginx/nginx.conf</span>
+    <span class="fn">owner</span>: <span class="st">root</span>
+    <span class="fn">group</span>: <span class="st">root</span>
+    <span class="fn">mode</span>: <span class="st">'0644'</span>
+  <span class="kw">notify</span>: <span class="st">Reload Nginx</span>
+
+- <span class="kw">name</span>: <span class="st">Убедиться что Nginx запущен</span>
+  <span class="fn">ansible.builtin.service</span>:
+    <span class="fn">name</span>: <span class="st">nginx</span>
+    <span class="fn">state</span>: <span class="st">started</span>
+    <span class="fn">enabled</span>: <span class="fl">true</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">roles/nginx/defaults/main.yml</div>
+                    <pre><code><span class="cm">---</span>
+<span class="fn">nginx_worker_processes</span>: <span class="st">auto</span>
+<span class="fn">nginx_worker_connections</span>: <span class="fl">1024</span>
+<span class="fn">nginx_keepalive_timeout</span>: <span class="fl">65</span>
+<span class="fn">nginx_server_name</span>: <span class="st">_</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Использование роли в плейбуке</div>
+                    <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Настройка веб-серверов</span>
+  <span class="kw">hosts</span>: <span class="st">webservers</span>
+  <span class="kw">become</span>: <span class="fl">true</span>
+
+  <span class="kw">roles</span>:
+    - <span class="st">nginx</span>
+    - <span class="kw">role</span>: <span class="st">app_deploy</span>
+      <span class="kw">vars</span>:
+        <span class="fn">app_version</span>: <span class="st">"2.1.0"</span></code></pre>
+                </div>
+
+                <p><strong>Ansible Galaxy</strong> — это репозиторий ролей и коллекций, созданных сообществом. Вы можете найти готовые роли для практически любой задачи: от настройки базы данных до конфигурации мониторинга. Команда <code>ansible-galaxy init</code> создаёт скелет роли с правильной структурой директорий.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с Ansible Galaxy</div>
+                    <pre><code><span class="cm"># Создать скелет новой роли</span>
+<span class="fn">ansible-galaxy</span> init roles/my_new_role
+
+<span class="cm"># Установить роль из Galaxy</span>
+<span class="fn">ansible-galaxy</span> install geerlingguy.docker
+
+<span class="cm"># Установить роли из requirements.yml</span>
+<span class="fn">ansible-galaxy</span> install <span class="fl">-r</span> requirements.yml
+
+<span class="cm"># Список установленных ролей</span>
+<span class="fn">ansible-galaxy</span> list</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">requirements.yml — зависимости проекта</div>
+                    <pre><code><span class="cm">---</span>
+<span class="kw">roles</span>:
+  - <span class="kw">name</span>: <span class="st">geerlingguy.docker</span>
+    <span class="kw">version</span>: <span class="st">"6.1.0"</span>
+  - <span class="kw">name</span>: <span class="st">geerlingguy.nginx</span>
+    <span class="kw">version</span>: <span class="st">"3.2.0"</span>
+
+<span class="kw">collections</span>:
+  - <span class="kw">name</span>: <span class="st">community.docker</span>
+    <span class="kw">version</span>: <span class="st">">=3.0.0"</span></code></pre>
+                </div>
+
+                <p>Зависимости роли указываются в <code>meta/main.yml</code>. Если роль <code>app_deploy</code> зависит от роли <code>nginx</code>, Ansible автоматически выполнит <code>nginx</code> перед <code>app_deploy</code>. Это позволяет строить цепочки зависимостей и избегать дублирования кода.</p>
+            </div>
+
+            <!-- ===== ШАБЛОНЫ JINJA2 ===== -->
+            <div class="section">
+                <div class="section-label">Шаблонизация</div>
+                <h2>Шаблоны Jinja2</h2>
+
+                <p>Ansible использует шаблонизатор <strong>Jinja2</strong> для динамической генерации конфигурационных файлов. Шаблоны — это текстовые файлы (обычно с расширением <code>.j2</code>), в которых статический текст дополнен специальными конструкциями: выражениями, условиями и циклами. Модуль <code>template</code> обрабатывает шаблон на управляющем узле, подставляя значения переменных и фактов, а затем копирует результат на управляемый узел. Это позволяет создавать конфигурации, которые автоматически адаптируются под каждый сервер.</p>
+
+                <p>В Jinja2 используется три типа разделителей:</p>
+                <ul style="margin: 0 0 16px 20px; color: #b0b0b0;">
+                    <li><code>{{ }}</code> — выражения (подстановка значений переменных)</li>
+                    <li><code>{% %}</code> — операторы (условия, циклы, макросы)</li>
+                    <li><code>{# #}</code> — комментарии (не попадают в результат)</li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-header">templates/nginx.conf.j2</div>
+                    <pre><code><span class="cm">{# Конфигурация Nginx, сгенерированная Ansible #}</span>
+<span class="cm"># Managed by Ansible — do not edit manually</span>
+
+<span class="kw">worker_processes</span> <span class="st">{{ nginx_worker_processes | default('auto') }}</span>;
+
+<span class="kw">events</span> {
+    <span class="kw">worker_connections</span> <span class="st">{{ nginx_worker_connections | default(1024) }}</span>;
+}
+
+<span class="kw">http</span> {
+    <span class="kw">include</span>       /etc/nginx/mime.types;
+    <span class="kw">default_type</span>  application/octet-stream;
+
+    <span class="kw">sendfile</span>    on;
+    <span class="kw">keepalive_timeout</span>  <span class="st">{{ nginx_keepalive_timeout | default(65) }}</span>;
+
+<span class="kw">{% if nginx_gzip_enabled | default(true) %}</span>
+    <span class="kw">gzip</span>  on;
+    <span class="kw">gzip_types</span>  text/plain text/css application/json application/javascript;
+<span class="kw">{% endif %}</span>
+
+<span class="kw">{% for vhost in nginx_vhosts %}</span>
+    <span class="kw">server</span> {
+        <span class="kw">listen</span> <span class="st">{{ vhost.listen | default(80) }}</span>;
+        <span class="kw">server_name</span> <span class="st">{{ vhost.server_name }}</span>;
+
+<span class="kw">{% if vhost.ssl | default(false) %}</span>
+        <span class="kw">listen</span> 443 ssl;
+        <span class="kw">ssl_certificate</span>     <span class="st">{{ vhost.ssl_cert }}</span>;
+        <span class="kw">ssl_certificate_key</span> <span class="st">{{ vhost.ssl_key }}</span>;
+<span class="kw">{% endif %}</span>
+
+        <span class="kw">location</span> / {
+            <span class="kw">proxy_pass</span> <span class="st">http://127.0.0.1:{{ vhost.backend_port }}</span>;
+            <span class="kw">proxy_set_header</span> Host $host;
+            <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+            <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+<span class="kw">{% endfor %}</span>
+}</code></pre>
+                </div>
+
+                <p><strong>Фильтры</strong> Jinja2 позволяют преобразовывать значения переменных. Они применяются через символ <code>|</code> (пайп). Ansible расширяет стандартные фильтры Jinja2 множеством собственных: преобразование типов, работа с путями, шифрование паролей, манипуляции со строками и списками.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Часто используемые фильтры</div>
+                    <pre><code><span class="cm">{# Значение по умолчанию #}</span>
+<span class="st">{{ variable | default("fallback_value") }}</span>
+
+<span class="cm">{# Преобразование типов #}</span>
+<span class="st">{{ string_var | int }}</span>
+<span class="st">{{ number_var | string }}</span>
+<span class="st">{{ value | bool }}</span>
+
+<span class="cm">{# Строковые операции #}</span>
+<span class="st">{{ hostname | upper }}</span>
+<span class="st">{{ path | basename }}</span>
+<span class="st">{{ filename | regex_replace('\.txt$', '.yml') }}</span>
+
+<span class="cm">{# Работа со списками #}</span>
+<span class="st">{{ list_var | join(', ') }}</span>
+<span class="st">{{ list_var | unique | sort }}</span>
+<span class="st">{{ list_var | length }}</span>
+
+<span class="cm">{# Хеширование и шифрование #}</span>
+<span class="st">{{ password | password_hash('sha512') }}</span>
+
+<span class="cm">{# Преобразование в JSON/YAML #}</span>
+<span class="st">{{ dict_var | to_nice_json }}</span>
+<span class="st">{{ dict_var | to_nice_yaml }}</span>
+
+<span class="cm">{# Комбинирование фильтров #}</span>
+<span class="st">{{ ansible_all_ipv4_addresses | select('match', '10\\.') | list | first }}</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ANSIBLE VAULT ===== -->
+            <div class="section">
+                <div class="section-label">Безопасность</div>
+                <h2>Ansible Vault</h2>
+
+                <p>В процессе автоматизации неизбежно возникает потребность работать с конфиденциальными данными: паролями баз данных, API-ключами, SSL-сертификатами, токенами доступа. Хранить их в открытом виде в репозитории — грубое нарушение безопасности. <strong>Ansible Vault</strong> решает эту проблему, предоставляя встроенный механизм шифрования файлов с помощью алгоритма AES-256. Зашифрованные файлы можно безопасно хранить в Git-репозитории рядом с остальным кодом.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Основные команды Vault</div>
+                    <pre><code><span class="cm"># Создать новый зашифрованный файл</span>
+<span class="fn">ansible-vault</span> create secrets.yml
+
+<span class="cm"># Зашифровать существующий файл</span>
+<span class="fn">ansible-vault</span> encrypt vars/production_secrets.yml
+
+<span class="cm"># Расшифровать файл</span>
+<span class="fn">ansible-vault</span> decrypt vars/production_secrets.yml
+
+<span class="cm"># Редактировать зашифрованный файл (откроется в $EDITOR)</span>
+<span class="fn">ansible-vault</span> edit secrets.yml
+
+<span class="cm"># Просмотреть содержимое без расшифровки на диск</span>
+<span class="fn">ansible-vault</span> view secrets.yml
+
+<span class="cm"># Сменить пароль шифрования</span>
+<span class="fn">ansible-vault</span> rekey secrets.yml
+
+<span class="cm"># Зашифровать отдельную строку (для встраивания в YAML)</span>
+<span class="fn">ansible-vault</span> encrypt_string <span class="st">'SuperSecret123'</span> <span class="fl">--name</span> <span class="st">'db_password'</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">secrets.yml — зашифрованные переменные</div>
+                    <pre><code><span class="cm">---</span>
+<span class="fn">db_password</span>: <span class="st">"s3cret_p@ssword"</span>
+<span class="fn">api_key</span>: <span class="st">"ak-9f8e7d6c5b4a3210"</span>
+<span class="fn">ssl_private_key</span>: |
+  <span class="st">-----BEGIN PRIVATE KEY-----</span>
+  <span class="st">MIIEvgIBADANBgkqhki...</span>
+  <span class="st">-----END PRIVATE KEY-----</span></code></pre>
+                </div>
+
+                <p>При запуске плейбука, использующего зашифрованные файлы, необходимо указать способ передачи пароля. Есть несколько вариантов: интерактивный ввод (<code>--ask-vault-pass</code>), файл с паролем (<code>--vault-password-file</code>) или переменная окружения (<code>ANSIBLE_VAULT_PASSWORD_FILE</code>). В CI/CD-пайплайнах обычно используется файл с паролем, который передаётся через секреты системы CI.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Запуск плейбука с Vault</div>
+                    <pre><code><span class="cm"># Запросить пароль интерактивно</span>
+<span class="fn">ansible-playbook</span> playbook.yml <span class="fl">--ask-vault-pass</span>
+
+<span class="cm"># Использовать файл с паролем</span>
+<span class="fn">ansible-playbook</span> playbook.yml <span class="fl">--vault-password-file</span> ~/.vault_pass
+
+<span class="cm"># Через переменную окружения</span>
+<span class="kw">export</span> <span class="fn">ANSIBLE_VAULT_PASSWORD_FILE</span>=~/.vault_pass
+<span class="fn">ansible-playbook</span> playbook.yml
+
+<span class="cm"># Использование Vault ID для нескольких паролей</span>
+<span class="fn">ansible-playbook</span> playbook.yml <span class="fl">--vault-id</span> prod@~/.vault_pass_prod <span class="fl">--vault-id</span> dev@~/.vault_pass_dev</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Практика:</strong> никогда не добавляйте файл с паролем Vault в Git. Добавьте <code>.vault_pass</code> в <code>.gitignore</code>. В CI/CD-системе передавайте пароль через защищённые переменные окружения (GitHub Secrets, GitLab CI Variables и т.д.).
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы создадим полноценный Ansible-проект для настройки веб-сервера: установим необходимые пакеты, настроим Nginx с помощью шаблона Jinja2, развернём простое приложение и организуем всё в виде роли. Каждый шаг сопровождается подробными пояснениями.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 — Создание структуры проекта</div>
+                    <p>Начнём с создания правильной структуры директорий для проекта. Чистая структура — залог поддерживаемой автоматизации. Файл <code>ansible.cfg</code> содержит настройки по умолчанию для проекта, чтобы не указывать их каждый раз при запуске.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание структуры</div>
+                        <pre><code><span class="fn">mkdir</span> <span class="fl">-p</span> webapp-ansible/{roles,group_vars,host_vars,templates,files}
+<span class="fn">cd</span> webapp-ansible
+
+<span class="cm"># Создать ansible.cfg</span>
+<span class="fn">cat</span> &gt; ansible.cfg &lt;&lt; <span class="st">'EOF'</span>
+[defaults]
+inventory = inventory.yml
+roles_path = roles
+host_key_checking = False
+retry_files_enabled = False
+
+[privilege_escalation]
+become = True
+become_method = sudo
+<span class="st">EOF</span>
+
+<span class="cm"># Создать инвентарь</span>
+<span class="fn">cat</span> &gt; inventory.yml &lt;&lt; <span class="st">'EOF'</span>
+<span class="kw">all</span>:
+  <span class="kw">children</span>:
+    <span class="kw">webservers</span>:
+      <span class="kw">hosts</span>:
+        <span class="st">web1</span>:
+          <span class="fn">ansible_host</span>: <span class="fl">192.168.1.10</span>
+        <span class="st">web2</span>:
+          <span class="fn">ansible_host</span>: <span class="fl">192.168.1.11</span>
+      <span class="kw">vars</span>:
+        <span class="fn">ansible_user</span>: <span class="st">deploy</span>
+        <span class="fn">ansible_python_interpreter</span>: <span class="st">/usr/bin/python3</span>
+<span class="st">EOF</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 — Создание роли для Nginx</div>
+                    <p>Используем <code>ansible-galaxy init</code> для создания скелета роли, а затем наполним его задачами. Роль будет устанавливать Nginx, копировать конфигурацию из шаблона и управлять сервисом.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание роли</div>
+                        <pre><code><span class="fn">ansible-galaxy</span> init roles/nginx</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">roles/nginx/defaults/main.yml</div>
+                        <pre><code><span class="cm">---</span>
+<span class="fn">nginx_worker_processes</span>: <span class="st">auto</span>
+<span class="fn">nginx_worker_connections</span>: <span class="fl">1024</span>
+<span class="fn">nginx_keepalive_timeout</span>: <span class="fl">65</span>
+<span class="fn">nginx_server_name</span>: <span class="st">_</span>
+<span class="fn">nginx_backend_port</span>: <span class="fl">8080</span>
+<span class="fn">nginx_root</span>: <span class="st">/var/www/myapp</span></code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">roles/nginx/tasks/main.yml</div>
+                        <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Установить Nginx</span>
+  <span class="fn">ansible.builtin.apt</span>:
+    <span class="fn">name</span>: <span class="st">nginx</span>
+    <span class="fn">state</span>: <span class="st">present</span>
+    <span class="fn">update_cache</span>: <span class="fl">true</span>
+    <span class="fn">cache_valid_time</span>: <span class="fl">3600</span>
+
+- <span class="kw">name</span>: <span class="st">Создать директорию сайта</span>
+  <span class="fn">ansible.builtin.file</span>:
+    <span class="fn">path</span>: <span class="st">"{{ nginx_root }}"</span>
+    <span class="fn">state</span>: <span class="st">directory</span>
+    <span class="fn">owner</span>: <span class="st">www-data</span>
+    <span class="fn">group</span>: <span class="st">www-data</span>
+    <span class="fn">mode</span>: <span class="st">'0755'</span>
+
+- <span class="kw">name</span>: <span class="st">Скопировать конфигурацию Nginx</span>
+  <span class="fn">ansible.builtin.template</span>:
+    <span class="fn">src</span>: <span class="st">nginx_vhost.conf.j2</span>
+    <span class="fn">dest</span>: <span class="st">/etc/nginx/sites-available/myapp</span>
+    <span class="fn">owner</span>: <span class="st">root</span>
+    <span class="fn">group</span>: <span class="st">root</span>
+    <span class="fn">mode</span>: <span class="st">'0644'</span>
+  <span class="kw">notify</span>: <span class="st">Reload Nginx</span>
+
+- <span class="kw">name</span>: <span class="st">Активировать виртуальный хост</span>
+  <span class="fn">ansible.builtin.file</span>:
+    <span class="fn">src</span>: <span class="st">/etc/nginx/sites-available/myapp</span>
+    <span class="fn">dest</span>: <span class="st">/etc/nginx/sites-enabled/myapp</span>
+    <span class="fn">state</span>: <span class="st">link</span>
+  <span class="kw">notify</span>: <span class="st">Reload Nginx</span>
+
+- <span class="kw">name</span>: <span class="st">Удалить default виртуальный хост</span>
+  <span class="fn">ansible.builtin.file</span>:
+    <span class="fn">path</span>: <span class="st">/etc/nginx/sites-enabled/default</span>
+    <span class="fn">state</span>: <span class="st">absent</span>
+  <span class="kw">notify</span>: <span class="st">Reload Nginx</span>
+
+- <span class="kw">name</span>: <span class="st">Убедиться что Nginx запущен и включён</span>
+  <span class="fn">ansible.builtin.service</span>:
+    <span class="fn">name</span>: <span class="st">nginx</span>
+    <span class="fn">state</span>: <span class="st">started</span>
+    <span class="fn">enabled</span>: <span class="fl">true</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 — Создание шаблона Nginx</div>
+                    <p>Шаблон Jinja2 позволит генерировать конфигурацию Nginx, адаптированную под переменные каждого хоста. Обратите внимание на использование фильтра <code>default()</code> для безопасной подстановки значений.</p>
+                    <div class="code-block">
+                        <div class="code-header">roles/nginx/templates/nginx_vhost.conf.j2</div>
+                        <pre><code><span class="cm"># Managed by Ansible — do not edit manually</span>
+<span class="cm"># Host: {{ inventory_hostname }}</span>
+
+<span class="kw">server</span> {
+    <span class="kw">listen</span> 80;
+    <span class="kw">server_name</span> <span class="st">{{ nginx_server_name | default('_') }}</span>;
+
+    <span class="kw">root</span> <span class="st">{{ nginx_root }}</span>;
+    <span class="kw">index</span> index.html;
+
+    <span class="kw">access_log</span> /var/log/nginx/myapp_access.log;
+    <span class="kw">error_log</span>  /var/log/nginx/myapp_error.log;
+
+    <span class="kw">location</span> / {
+        <span class="kw">try_files</span> $uri $uri/ @backend;
+    }
+
+    <span class="kw">location</span> @backend {
+        <span class="kw">proxy_pass</span> <span class="st">http://127.0.0.1:{{ nginx_backend_port }}</span>;
+        <span class="kw">proxy_set_header</span> Host $host;
+        <span class="kw">proxy_set_header</span> X-Real-IP $remote_addr;
+        <span class="kw">proxy_set_header</span> X-Forwarded-For $proxy_add_x_forwarded_for;
+        <span class="kw">proxy_set_header</span> X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 — Обработчики (handlers)</div>
+                    <p>Обработчик перезагружает Nginx только при изменении конфигурации, но перед этим проверяет её синтаксис. Это предотвращает падение сервера из-за ошибки в конфигурации.</p>
+                    <div class="code-block">
+                        <div class="code-header">roles/nginx/handlers/main.yml</div>
+                        <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Validate Nginx config</span>
+  <span class="fn">ansible.builtin.command</span>: <span class="st">nginx -t</span>
+  <span class="kw">listen</span>: <span class="st">Reload Nginx</span>
+
+- <span class="kw">name</span>: <span class="st">Reload Nginx</span>
+  <span class="fn">ansible.builtin.service</span>:
+    <span class="fn">name</span>: <span class="st">nginx</span>
+    <span class="fn">state</span>: <span class="st">reloaded</span>
+  <span class="kw">listen</span>: <span class="st">Reload Nginx</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 — Деплой приложения</div>
+                    <p>Создадим задачи для развёртывания статического приложения: копирование файлов, установка зависимостей и настройка прав доступа.</p>
+                    <div class="code-block">
+                        <div class="code-header">deploy.yml — плейбук развёртывания</div>
+                        <pre><code><span class="cm">---</span>
+- <span class="kw">name</span>: <span class="st">Развернуть веб-приложение</span>
+  <span class="kw">hosts</span>: <span class="st">webservers</span>
+  <span class="kw">become</span>: <span class="fl">true</span>
+
+  <span class="kw">vars</span>:
+    <span class="fn">app_repo</span>: <span class="st">"https://github.com/example/webapp.git"</span>
+    <span class="fn">app_version</span>: <span class="st">"main"</span>
+    <span class="fn">app_dir</span>: <span class="st">"/var/www/myapp"</span>
+
+  <span class="kw">pre_tasks</span>:
+    - <span class="kw">name</span>: <span class="st">Установить базовые пакеты</span>
+      <span class="fn">ansible.builtin.apt</span>:
+        <span class="fn">name</span>:
+          - <span class="st">git</span>
+          - <span class="st">curl</span>
+          - <span class="st">ufw</span>
+        <span class="fn">state</span>: <span class="st">present</span>
+        <span class="fn">update_cache</span>: <span class="fl">true</span>
+
+  <span class="kw">roles</span>:
+    - <span class="st">nginx</span>
+
+  <span class="kw">tasks</span>:
+    - <span class="kw">name</span>: <span class="st">Клонировать репозиторий</span>
+      <span class="fn">ansible.builtin.git</span>:
+        <span class="fn">repo</span>: <span class="st">"{{ app_repo }}"</span>
+        <span class="fn">dest</span>: <span class="st">"{{ app_dir }}"</span>
+        <span class="fn">version</span>: <span class="st">"{{ app_version }}"</span>
+        <span class="fn">force</span>: <span class="fl">true</span>
+      <span class="kw">notify</span>: <span class="st">Reload Nginx</span>
+
+    - <span class="kw">name</span>: <span class="st">Настроить права доступа</span>
+      <span class="fn">ansible.builtin.file</span>:
+        <span class="fn">path</span>: <span class="st">"{{ app_dir }}"</span>
+        <span class="fn">owner</span>: <span class="st">www-data</span>
+        <span class="fn">group</span>: <span class="st">www-data</span>
+        <span class="fn">recurse</span>: <span class="fl">true</span>
+
+    - <span class="kw">name</span>: <span class="st">Настроить firewall</span>
+      <span class="fn">community.general.ufw</span>:
+        <span class="fn">rule</span>: <span class="st">allow</span>
+        <span class="fn">port</span>: <span class="st">"{{ item }}"</span>
+        <span class="fn">proto</span>: <span class="st">tcp</span>
+      <span class="kw">loop</span>:
+        - <span class="st">"22"</span>
+        - <span class="st">"80"</span>
+        - <span class="st">"443"</span>
+
+    - <span class="kw">name</span>: <span class="st">Включить firewall</span>
+      <span class="fn">community.general.ufw</span>:
+        <span class="fn">state</span>: <span class="st">enabled</span>
+        <span class="fn">policy</span>: <span class="st">deny</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 6 — Запуск и проверка</div>
+                    <p>Запускаем плейбук и проверяем результат. Флаг <code>--check</code> позволяет увидеть, какие изменения будут внесены, без реального выполнения. Флаг <code>--diff</code> показывает различия в файлах.</p>
+                    <div class="code-block">
+                        <div class="code-header">Запуск плейбука</div>
+                        <pre><code><span class="cm"># Проверка синтаксиса</span>
+<span class="fn">ansible-playbook</span> deploy.yml <span class="fl">--syntax-check</span>
+
+<span class="cm"># Пробный запуск (dry run)</span>
+<span class="fn">ansible-playbook</span> deploy.yml <span class="fl">--check</span> <span class="fl">--diff</span>
+
+<span class="cm"># Реальный запуск</span>
+<span class="fn">ansible-playbook</span> deploy.yml
+
+<span class="cm"># Запуск с подробным выводом</span>
+<span class="fn">ansible-playbook</span> deploy.yml <span class="fl">-vvv</span>
+
+<span class="cm"># Запуск только определённых тегов</span>
+<span class="fn">ansible-playbook</span> deploy.yml <span class="fl">--tags</span> <span class="st">"deploy"</span>
+
+<span class="cm"># Ограничить выполнение одним хостом</span>
+<span class="fn">ansible-playbook</span> deploy.yml <span class="fl">--limit</span> <span class="st">web1</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> мы создали полноценный Ansible-проект с ролью для Nginx, шаблоном Jinja2 для конфигурации, обработчиками для безопасной перезагрузки и плейбуком развёртывания. Эта структура легко масштабируется: можно добавить роли для базы данных, мониторинга, SSL-сертификатов и других компонентов.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Создайте инвентарь с тремя группами серверов (<code>web</code>, <code>db</code>, <code>monitoring</code>), каждая с двумя хостами. Определите переменные группы в <code>group_vars/</code> и переменные хоста в <code>host_vars/</code>. Проверьте, что Ansible корректно разрешает переменные: <code>ansible web -m debug -a "var=http_port"</code>.</li>
+                    <li>Напишите плейбук, который устанавливает на серверы группы <code>web</code> пакеты <code>nginx</code>, <code>curl</code> и <code>htop</code> через цикл <code>loop</code>, а на серверы группы <code>db</code> — <code>postgresql</code> и <code>postgresql-contrib</code>. Используйте условие <code>when</code> для проверки ОС.</li>
+                    <li>Создайте роль <code>base_security</code>, которая: настраивает SSH (запрет root-логина, только ключевая аутентификация), устанавливает и настраивает UFW (только порты 22, 80, 443), создаёт пользователя <code>deploy</code> с sudo-доступом без пароля. Используйте шаблоны Jinja2 для конфигураций.</li>
+                    <li>Зашифруйте файл с переменными через Ansible Vault (пароль БД, API-ключ, секретный токен). Создайте плейбук, который использует эти переменные для генерации файла <code>.env</code> через шаблон Jinja2. Запустите плейбук с <code>--vault-password-file</code>.</li>
+                    <li>Напишите плейбук для rolling update: обновление приложения на веб-серверах по одному (<code>serial: 1</code>) с проверкой здоровья после каждого обновления. Используйте модули <code>uri</code> для health check и <code>fail</code> для остановки при ошибке.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://docs.ansible.com/" target="_blank">Ansible Documentation</a>
+                        <div class="res-desc">Официальная документация Ansible — исчерпывающий справочник по всем модулям, плагинам и best practices</div>
+                    </li>
+                    <li>
+                        <a href="https://galaxy.ansible.com/" target="_blank">Ansible Galaxy</a>
+                        <div class="res-desc">Репозиторий ролей и коллекций сообщества — готовые решения для типовых задач автоматизации</div>
+                    </li>
+                    <li>
+                        <a href="https://www.ansiblefordevops.com/" target="_blank">Ansible for DevOps — Jeff Geerling</a>
+                        <div class="res-desc">Лучшая книга по Ansible от одного из ведущих контрибьюторов — от основ до продвинутых паттернов</div>
+                    </li>
+                    <li>
+                        <a href="https://github.com/ansible/ansible-examples" target="_blank">Ansible Examples (GitHub)</a>
+                        <div class="res-desc">Официальный репозиторий с примерами плейбуков для различных сценариев использования</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="ansible">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="cicd.html" class="nav-title">&larr; CI/CD</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="terraform.html" class="nav-title">Terraform &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

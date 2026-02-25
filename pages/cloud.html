@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Облачные платформы — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Облачные платформы</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <!-- ===== ЗАГОЛОВОК ===== -->
+            <h1>Облачные платформы</h1>
+            <p class="subtitle">Облако &mdash; это место, где живёт современная инфраструктура. Подавляющее большинство новых проектов запускается в облачных средах, и для DevOps-инженера владение облачными платформами является одним из ключевых и наиболее востребованных навыков.</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <p class="section-label">Основы</p>
+                <h2>Введение</h2>
+
+                <p>Облачные вычисления (cloud computing) &mdash; это модель предоставления вычислительных ресурсов через интернет по запросу. Вместо покупки и обслуживания собственных серверов, компании арендуют вычислительные мощности, хранилища и сетевые ресурсы у облачных провайдеров, оплачивая только фактическое потребление. Эта модель кардинально изменила подход к построению IT-инфраструктуры: вместо месяцев на закупку и настройку оборудования, новый сервер можно запустить за считанные минуты. Облачные провайдеры берут на себя обслуживание физической инфраструктуры &mdash; дата-центров, электропитания, охлаждения, сетевого оборудования &mdash; позволяя инженерам сосредоточиться на разработке и развёртывании приложений.</p>
+
+                <p>Существует три основных модели облачных сервисов: <strong>IaaS</strong> (Infrastructure as a Service) &mdash; провайдер предоставляет виртуальные машины, сети и хранилища, а вы управляете всем остальным (ОС, приложениями, данными); <strong>PaaS</strong> (Platform as a Service) &mdash; провайдер берёт на себя также управление ОС и средой выполнения, а вы развёртываете только код (примеры: Heroku, Google App Engine, AWS Elastic Beanstalk); <strong>SaaS</strong> (Software as a Service) &mdash; готовые приложения, доступные через браузер (Gmail, Slack, Salesforce). Для DevOps-инженера наиболее актуальны IaaS и PaaS, поскольку именно на этих уровнях происходит основная работа по построению и автоматизации инфраструктуры.</p>
+
+                <p>Рынок облачных вычислений доминируют три крупнейших провайдера, известных как &laquo;Большая тройка&raquo;: <strong>AWS</strong> (Amazon Web Services) занимает около 31% рынка и является безусловным лидером с наибольшим количеством сервисов и самой развитой экосистемой; <strong>Microsoft Azure</strong> &mdash; около 25% рынка, особенно популярен в корпоративном сегменте и среди компаний, уже использующих продукты Microsoft; <strong>Google Cloud Platform (GCP)</strong> &mdash; около 11% рынка, отличается сильными решениями в области аналитики данных, машинного обучения и управляемого Kubernetes (GKE). Все три провайдера предоставляют бесплатные уровни (free tiers), позволяющие изучать облачные технологии без финансовых вложений. AWS Free Tier включает 12 месяцев бесплатного использования ряда сервисов, GCP даёт $300 кредитов на 90 дней, а Azure &mdash; $200 кредитов на 30 дней плюс ряд сервисов бесплатно на 12 месяцев.</p>
+            </div>
+
+            <!-- ===== AWS — ОСНОВНЫЕ СЕРВИСЫ ===== -->
+            <div class="section">
+                <p class="section-label">Amazon Web Services</p>
+                <h2>AWS &mdash; основные сервисы</h2>
+
+                <p>AWS является самой популярной облачной платформой в мире, и именно с неё рекомендуется начинать изучение облачных технологий. Платформа насчитывает более 200 сервисов, однако для DevOps-инженера на начальном этапе достаточно освоить 10&ndash;15 ключевых сервисов. Важно понимать, что AWS построен на концепции регионов (regions) и зон доступности (availability zones): регион &mdash; это географическая область (например, us-east-1, eu-west-1), а зона доступности &mdash; один или несколько физически изолированных дата-центров внутри региона. Размещение ресурсов в нескольких зонах доступности обеспечивает высокую доступность и отказоустойчивость.</p>
+
+                <p><strong>EC2</strong> (Elastic Compute Cloud) &mdash; основной сервис виртуальных машин. Вы выбираете тип инстанса (t3.micro, m5.large, c5.xlarge и т.д.), который определяет количество CPU, объём памяти и производительность сети. AMI (Amazon Machine Image) &mdash; это образ операционной системы, из которого создаётся инстанс. Key pair используется для SSH-доступа. User data позволяет передать скрипт, который выполнится при первом запуске инстанса &mdash; это удобно для автоматической настройки. <strong>S3</strong> (Simple Storage Service) &mdash; объектное хранилище практически неограниченного объёма. Данные хранятся в корзинах (buckets), каждый объект имеет уникальный ключ. S3 поддерживает версионирование, шифрование и политики жизненного цикла для автоматического перемещения данных между классами хранения. <strong>RDS</strong> (Relational Database Service) &mdash; управляемые реляционные базы данных (PostgreSQL, MySQL, MariaDB, Oracle, SQL Server). AWS берёт на себя резервное копирование, патчинг, масштабирование. Multi-AZ обеспечивает отказоустойчивость через синхронную репликацию в другую зону доступности, а Read Replicas позволяют распределить нагрузку на чтение.</p>
+
+                <p><strong>VPC</strong> (Virtual Private Cloud) &mdash; изолированная виртуальная сеть, в которой вы размещаете свои ресурсы. VPC включает подсети, таблицы маршрутизации, шлюзы и группы безопасности. <strong>IAM</strong> (Identity and Access Management) &mdash; система управления доступом, определяющая кто и что может делать в вашем AWS-аккаунте. <strong>Lambda</strong> &mdash; serverless-вычисления, позволяющие запускать код без управления серверами; вы платите только за время выполнения. <strong>CloudFront</strong> &mdash; CDN (Content Delivery Network) для доставки контента пользователям с минимальной задержкой через глобальную сеть edge-локаций. <strong>ECS</strong> (Elastic Container Service) и <strong>EKS</strong> (Elastic Kubernetes Service) &mdash; сервисы для запуска контейнеров; ECS &mdash; собственный оркестратор AWS, EKS &mdash; управляемый Kubernetes. <strong>Route 53</strong> &mdash; DNS-сервис с поддержкой маршрутизации трафика (weighted, latency-based, geolocation, failover) и health checks.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Запуск EC2-инстанса через AWS CLI</div>
+                    <pre><code><span class="cm"># Запуск EC2-инстанса с Amazon Linux 2023</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">run-instances</span> \
+    <span class="fl">--image-id</span> <span class="st">ami-0c02fb55956c7d316</span> \
+    <span class="fl">--instance-type</span> <span class="st">t3.micro</span> \
+    <span class="fl">--key-name</span> <span class="st">my-key-pair</span> \
+    <span class="fl">--security-group-ids</span> <span class="st">sg-0123456789abcdef0</span> \
+    <span class="fl">--subnet-id</span> <span class="st">subnet-0123456789abcdef0</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=instance,Tags=[{Key=Name,Value=web-server}]'</span> \
+    <span class="fl">--user-data</span> <span class="st">file://setup.sh</span>
+
+<span class="cm"># Пример user-data скрипта (setup.sh)</span>
+<span class="cm">#!/bin/bash</span>
+<span class="fn">yum</span> <span class="st">update</span> <span class="fl">-y</span>
+<span class="fn">yum</span> <span class="st">install</span> <span class="fl">-y</span> <span class="st">nginx</span>
+<span class="fn">systemctl</span> <span class="st">start</span> <span class="st">nginx</span>
+<span class="fn">systemctl</span> <span class="st">enable</span> <span class="st">nginx</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с S3 через AWS CLI</div>
+                    <pre><code><span class="cm"># Создание S3-корзины</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">mb</span> <span class="st">s3://my-devops-bucket-2024</span> <span class="fl">--region</span> <span class="st">eu-west-1</span>
+
+<span class="cm"># Загрузка файла</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">cp</span> <span class="st">./index.html</span> <span class="st">s3://my-devops-bucket-2024/</span>
+
+<span class="cm"># Синхронизация директории</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">sync</span> <span class="st">./build/</span> <span class="st">s3://my-devops-bucket-2024/</span> <span class="fl">--delete</span>
+
+<span class="cm"># Список объектов</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">ls</span> <span class="st">s3://my-devops-bucket-2024/</span> <span class="fl">--recursive</span> <span class="fl">--human-readable</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== IAM И БЕЗОПАСНОСТЬ ===== -->
+            <div class="section">
+                <p class="section-label">Безопасность</p>
+                <h2>IAM и безопасность</h2>
+
+                <p>IAM (Identity and Access Management) &mdash; это фундамент безопасности в AWS и, пожалуй, самый важный сервис, который необходимо глубоко понимать. Принцип наименьших привилегий (Principle of Least Privilege) &mdash; краеугольный камень работы с IAM: каждому пользователю, сервису или приложению следует предоставлять только те разрешения, которые минимально необходимы для выполнения их задач. Нарушение этого принципа &mdash; одна из самых распространённых причин инцидентов безопасности в облаке. Никогда не используйте root-аккаунт для повседневной работы: создайте IAM-пользователя с необходимыми разрешениями и заблокируйте root-аккаунт, используя его только для критически важных операций (например, изменения платёжной информации).</p>
+
+                <p>В IAM существуют четыре ключевых сущности: <strong>Users</strong> &mdash; учётные записи для реальных людей, которые входят в AWS Console или используют CLI; <strong>Groups</strong> &mdash; логические объединения пользователей для упрощения управления разрешениями (например, группы Developers, Admins, ReadOnly); <strong>Roles</strong> &mdash; временные идентификаторы, которые могут быть &laquo;примерены&raquo; пользователями, сервисами или аккаунтами; <strong>Policies</strong> &mdash; JSON-документы, определяющие разрешения. Критически важное правило: для сервисов AWS всегда используйте роли, а не ключи доступа. Например, если EC2-инстансу нужен доступ к S3, присвойте ему IAM-роль с соответствующей политикой, а не храните ключи доступа в переменных окружения на сервере. Роли выдают временные credentials, которые автоматически ротируются, что значительно повышает безопасность.</p>
+
+                <p>Политики IAM записываются в формате JSON и содержат элементы: <strong>Effect</strong> (Allow или Deny), <strong>Action</strong> (конкретные API-вызовы, например s3:GetObject), <strong>Resource</strong> (ARN ресурса, к которому применяется разрешение), и опциональный <strong>Condition</strong> (дополнительные условия, например ограничение по IP-адресу или обязательное использование MFA). Всегда включайте многофакторную аутентификацию (MFA) для всех IAM-пользователей, особенно для тех, кто имеет административные привилегии. Для управления множеством аккаунтов используйте AWS Organizations, который позволяет централизованно управлять политиками безопасности через Service Control Policies (SCP) и консолидировать биллинг.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Пример IAM-политики (JSON)</div>
+                    <pre><code>{
+    <span class="st">"Version"</span>: <span class="st">"2012-10-17"</span>,
+    <span class="st">"Statement"</span>: [
+        {
+            <span class="st">"Sid"</span>: <span class="st">"AllowS3ReadOnly"</span>,
+            <span class="st">"Effect"</span>: <span class="st">"Allow"</span>,
+            <span class="st">"Action"</span>: [
+                <span class="st">"s3:GetObject"</span>,
+                <span class="st">"s3:ListBucket"</span>
+            ],
+            <span class="st">"Resource"</span>: [
+                <span class="st">"arn:aws:s3:::my-bucket"</span>,
+                <span class="st">"arn:aws:s3:::my-bucket/*"</span>
+            ]
+        },
+        {
+            <span class="st">"Sid"</span>: <span class="st">"DenyDeleteWithoutMFA"</span>,
+            <span class="st">"Effect"</span>: <span class="st">"Deny"</span>,
+            <span class="st">"Action"</span>: <span class="st">"s3:DeleteObject"</span>,
+            <span class="st">"Resource"</span>: <span class="st">"arn:aws:s3:::my-bucket/*"</span>,
+            <span class="st">"Condition"</span>: {
+                <span class="st">"BoolIfExists"</span>: {
+                    <span class="st">"aws:MultiFactorAuthPresent"</span>: <span class="st">"false"</span>
+                }
+            }
+        }
+    ]
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Управление IAM через CLI</div>
+                    <pre><code><span class="cm"># Создание IAM-пользователя</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">create-user</span> <span class="fl">--user-name</span> <span class="st">developer-ivan</span>
+
+<span class="cm"># Создание группы и добавление пользователя</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">create-group</span> <span class="fl">--group-name</span> <span class="st">Developers</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">add-user-to-group</span> <span class="fl">--user-name</span> <span class="st">developer-ivan</span> <span class="fl">--group-name</span> <span class="st">Developers</span>
+
+<span class="cm"># Прикрепление политики к группе</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">attach-group-policy</span> \
+    <span class="fl">--group-name</span> <span class="st">Developers</span> \
+    <span class="fl">--policy-arn</span> <span class="st">arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess</span>
+
+<span class="cm"># Создание IAM-роли для EC2</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">create-role</span> \
+    <span class="fl">--role-name</span> <span class="st">EC2-S3-Access</span> \
+    <span class="fl">--assume-role-policy-document</span> <span class="st">file://trust-policy.json</span>
+
+<span class="cm"># Список политик пользователя</span>
+<span class="fn">aws</span> <span class="st">iam</span> <span class="st">list-attached-user-policies</span> <span class="fl">--user-name</span> <span class="st">developer-ivan</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Золотое правило IAM:</strong> никогда не создавайте ключи доступа (Access Keys) для root-аккаунта. Если они скомпрометированы, злоумышленник получает полный контроль над всем аккаунтом. Используйте IAM-роли для сервисов и IAM-пользователей с MFA для людей. Регулярно проверяйте неиспользуемые credentials через IAM Credential Report.
+                </div>
+            </div>
+
+            <!-- ===== СЕТЬ В ОБЛАКЕ (VPC) ===== -->
+            <div class="section">
+                <p class="section-label">Сетевая инфраструктура</p>
+                <h2>Сеть в облаке (VPC)</h2>
+
+                <p>VPC (Virtual Private Cloud) &mdash; это логически изолированная виртуальная сеть в облаке AWS, которую вы полностью контролируете. Каждый VPC имеет свой диапазон IP-адресов (CIDR-блок), например <code>10.0.0.0/16</code>, что даёт 65 536 адресов. Внутри VPC вы создаёте подсети (subnets), которые размещаются в конкретных зонах доступности. Подсети делятся на два типа: <strong>публичные</strong> &mdash; имеют маршрут к Internet Gateway и могут получать публичные IP-адреса; <strong>приватные</strong> &mdash; не имеют прямого доступа из интернета. Типичная архитектура включает публичные подсети для балансировщиков нагрузки и bastion-хостов, и приватные подсети для серверов приложений и баз данных.</p>
+
+                <p><strong>Internet Gateway (IGW)</strong> &mdash; компонент, обеспечивающий связь VPC с интернетом. Он добавляется в таблицу маршрутизации публичной подсети (маршрут <code>0.0.0.0/0 &rarr; igw-xxx</code>). <strong>NAT Gateway</strong> позволяет ресурсам в приватных подсетях инициировать исходящие соединения в интернет (например, для загрузки обновлений), при этом входящие соединения из интернета невозможны. NAT Gateway размещается в публичной подсети и указывается как target в таблице маршрутизации приватной подсети. Обратите внимание: NAT Gateway &mdash; один из самых дорогих сетевых компонентов AWS, стоимость складывается из почасовой оплаты и платы за трафик.</p>
+
+                <p><strong>Security Groups</strong> &mdash; виртуальные файрволы на уровне инстанса. Они являются <strong>stateful</strong>: если входящее соединение разрешено, ответный трафик автоматически пропускается. Правила Security Groups определяют только разрешающие правила (allow rules); всё, что не разрешено, автоматически запрещено. <strong>Network ACLs (NACLs)</strong> &mdash; файрволы на уровне подсети. Они являются <strong>stateless</strong>: необходимо явно создавать правила для входящего и исходящего трафика. NACLs поддерживают как разрешающие, так и запрещающие правила и обрабатываются в порядке номеров правил. На практике большинство задач решается с помощью Security Groups, а NACLs используются как дополнительный уровень защиты. Для соединения нескольких VPC между собой используется <strong>VPC Peering</strong> (point-to-point) или <strong>Transit Gateway</strong> (hub-and-spoke для множества VPC).</p>
+
+                <div class="code-block">
+                    <div class="code-header">Архитектура VPC (текстовая диаграмма)</div>
+                    <pre><code><span class="cm">                       Internet</span>
+<span class="cm">                          |</span>
+<span class="cm">                    [Internet Gateway]</span>
+<span class="cm">                          |</span>
+<span class="cm">            +-------------+-------------+</span>
+<span class="cm">            |         VPC 10.0.0.0/16         |</span>
+<span class="cm">            |                                   |</span>
+<span class="cm">  +---------+---------+    +----------+---------+</span>
+<span class="cm">  | Public Subnet      |    | Public Subnet       |</span>
+<span class="cm">  | 10.0.1.0/24        |    | 10.0.2.0/24         |</span>
+<span class="cm">  | AZ: eu-west-1a     |    | AZ: eu-west-1b      |</span>
+<span class="cm">  |                    |    |                     |</span>
+<span class="cm">  | [ALB]  [NAT GW]   |    | [ALB]  [NAT GW]     |</span>
+<span class="cm">  +--------+-----------+    +----------+----------+</span>
+<span class="cm">           |                           |</span>
+<span class="cm">  +--------+-----------+    +----------+----------+</span>
+<span class="cm">  | Private Subnet      |    | Private Subnet      |</span>
+<span class="cm">  | 10.0.10.0/24        |    | 10.0.20.0/24        |</span>
+<span class="cm">  | AZ: eu-west-1a      |    | AZ: eu-west-1b      |</span>
+<span class="cm">  |                     |    |                     |</span>
+<span class="cm">  | [EC2] [EC2]         |    | [EC2] [RDS Standby] |</span>
+<span class="cm">  +---------------------+    +---------------------+</span>
+<span class="cm">  |                     |    |                     |</span>
+<span class="cm">  +--------+-----------+    +----------+----------+</span>
+<span class="cm">  | DB Subnet            |    | DB Subnet           |</span>
+<span class="cm">  | 10.0.100.0/24        |    | 10.0.200.0/24       |</span>
+<span class="cm">  | [RDS Primary]        |    | [RDS Replica]        |</span>
+<span class="cm">  +---------------------+    +---------------------+</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Создание VPC и подсетей через AWS CLI</div>
+                    <pre><code><span class="cm"># Создание VPC</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-vpc</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.0.0/16</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=vpc,Tags=[{Key=Name,Value=my-vpc}]'</span>
+
+<span class="cm"># Создание публичной подсети</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-subnet</span> \
+    <span class="fl">--vpc-id</span> <span class="st">vpc-0123456789abcdef0</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.1.0/24</span> \
+    <span class="fl">--availability-zone</span> <span class="st">eu-west-1a</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=subnet,Tags=[{Key=Name,Value=public-1a}]'</span>
+
+<span class="cm"># Создание приватной подсети</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-subnet</span> \
+    <span class="fl">--vpc-id</span> <span class="st">vpc-0123456789abcdef0</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.10.0/24</span> \
+    <span class="fl">--availability-zone</span> <span class="st">eu-west-1a</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=subnet,Tags=[{Key=Name,Value=private-1a}]'</span>
+
+<span class="cm"># Создание Internet Gateway</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-internet-gateway</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=internet-gateway,Tags=[{Key=Name,Value=my-igw}]'</span>
+
+<span class="cm"># Присоединение IGW к VPC</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">attach-internet-gateway</span> \
+    <span class="fl">--internet-gateway-id</span> <span class="st">igw-0123456789abcdef0</span> \
+    <span class="fl">--vpc-id</span> <span class="st">vpc-0123456789abcdef0</span></code></pre>
+                </div>
+
+                <h3>Security Groups vs NACLs</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Характеристика</th>
+                                <th>Security Groups</th>
+                                <th>Network ACLs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Уровень</td>
+                                <td>Инстанс (ENI)</td>
+                                <td>Подсеть</td>
+                            </tr>
+                            <tr>
+                                <td>Состояние</td>
+                                <td>Stateful</td>
+                                <td>Stateless</td>
+                            </tr>
+                            <tr>
+                                <td>Правила</td>
+                                <td>Только Allow</td>
+                                <td>Allow и Deny</td>
+                            </tr>
+                            <tr>
+                                <td>Обработка</td>
+                                <td>Все правила оцениваются</td>
+                                <td>По номеру правила (по порядку)</td>
+                            </tr>
+                            <tr>
+                                <td>По умолчанию</td>
+                                <td>Весь входящий запрещён, весь исходящий разрешён</td>
+                                <td>Весь трафик разрешён</td>
+                            </tr>
+                            <tr>
+                                <td>Ссылка на SG</td>
+                                <td>Можно ссылаться на другие SG</td>
+                                <td>Только CIDR-блоки</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Совет по архитектуре:</strong> вместо указания конкретных IP-адресов в правилах Security Groups, ссылайтесь на другие Security Groups. Например, Security Group для базы данных может разрешать входящий трафик на порт 5432 от Security Group веб-серверов. Это делает правила динамическими: при добавлении нового веб-сервера он автоматически получает доступ к базе.
+                </div>
+            </div>
+
+            <!-- ===== ХРАНЕНИЕ ДАННЫХ ===== -->
+            <div class="section">
+                <p class="section-label">Хранилища</p>
+                <h2>Хранение данных</h2>
+
+                <p><strong>Amazon S3</strong> &mdash; наиболее универсальный сервис хранения в AWS. Он предлагает несколько классов хранения, оптимизированных для разных сценариев использования: <strong>S3 Standard</strong> &mdash; для часто запрашиваемых данных (доступность 99,99%, 11 девяток долговечности); <strong>S3 Standard-IA</strong> (Infrequent Access) &mdash; для данных, запрашиваемых реже раза в месяц, но требующих быстрого доступа (дешевле в хранении, дороже в доступе); <strong>S3 One Zone-IA</strong> &mdash; аналогично, но данные хранятся только в одной зоне доступности; <strong>S3 Glacier Instant Retrieval</strong> &mdash; для архивных данных с мгновенным доступом; <strong>S3 Glacier Flexible Retrieval</strong> &mdash; для архивов с временем восстановления от минут до часов; <strong>S3 Glacier Deep Archive</strong> &mdash; самый дешёвый класс, время восстановления 12&ndash;48 часов. Правила жизненного цикла (Lifecycle Policies) позволяют автоматически перемещать объекты между классами и удалять их по истечении заданного срока.</p>
+
+                <p><strong>Amazon EBS</strong> (Elastic Block Store) &mdash; блочное хранилище, подключаемое к EC2-инстансам как виртуальные диски. Основные типы томов: <strong>gp3</strong> &mdash; SSD общего назначения, базовая производительность 3000 IOPS и 125 МБ/с пропускной способности, которую можно увеличить до 16 000 IOPS и 1000 МБ/с; <strong>io2 Block Express</strong> &mdash; высокопроизводительный SSD для критически важных нагрузок (базы данных), до 256 000 IOPS; <strong>st1</strong> &mdash; HDD, оптимизированный для последовательного чтения больших объёмов данных (лог-файлы, потоковая обработка); <strong>sc1</strong> &mdash; самый дешёвый HDD для данных с редким доступом. EBS-тома привязаны к одной зоне доступности, но их можно снимать снэпшоты (snapshots) и создавать новые тома в другой AZ из этих снэпшотов.</p>
+
+                <p><strong>Amazon EFS</strong> (Elastic File System) &mdash; управляемая сетевая файловая система на базе NFSv4.1, которая может быть одновременно подключена к множеству EC2-инстансов в разных зонах доступности. Это делает EFS идеальным решением для общих данных: CMS-контент, конфигурационные файлы, shared home-директории. EFS автоматически масштабируется и не требует предварительного указания размера. Выбор между S3, EBS и EFS зависит от сценария: S3 &mdash; для объектов (статические файлы, бэкапы, media); EBS &mdash; для блочных данных (корневые диски, базы данных); EFS &mdash; для общего файлового доступа между несколькими серверами.</p>
+
+                <div class="code-block">
+                    <div class="code-header">S3 Lifecycle Policy (JSON)</div>
+                    <pre><code>{
+    <span class="st">"Rules"</span>: [
+        {
+            <span class="st">"ID"</span>: <span class="st">"ArchiveOldLogs"</span>,
+            <span class="st">"Status"</span>: <span class="st">"Enabled"</span>,
+            <span class="st">"Filter"</span>: {
+                <span class="st">"Prefix"</span>: <span class="st">"logs/"</span>
+            },
+            <span class="st">"Transitions"</span>: [
+                {
+                    <span class="st">"Days"</span>: <span class="fl">30</span>,
+                    <span class="st">"StorageClass"</span>: <span class="st">"STANDARD_IA"</span>
+                },
+                {
+                    <span class="st">"Days"</span>: <span class="fl">90</span>,
+                    <span class="st">"StorageClass"</span>: <span class="st">"GLACIER"</span>
+                }
+            ],
+            <span class="st">"Expiration"</span>: {
+                <span class="st">"Days"</span>: <span class="fl">365</span>
+            }
+        }
+    ]
+}</code></pre>
+                </div>
+
+                <h3>Сравнение хранилищ AWS</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Характеристика</th>
+                                <th>S3</th>
+                                <th>EBS</th>
+                                <th>EFS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Тип</td>
+                                <td>Объектное хранилище</td>
+                                <td>Блочное хранилище</td>
+                                <td>Файловое хранилище</td>
+                            </tr>
+                            <tr>
+                                <td>Протокол доступа</td>
+                                <td>HTTP/HTTPS (API)</td>
+                                <td>Блочный (как диск)</td>
+                                <td>NFS v4.1</td>
+                            </tr>
+                            <tr>
+                                <td>Подключение</td>
+                                <td>Из любого места</td>
+                                <td>Один EC2-инстанс (одна AZ)</td>
+                                <td>Несколько EC2 (несколько AZ)</td>
+                            </tr>
+                            <tr>
+                                <td>Масштабирование</td>
+                                <td>Практически безлимитное</td>
+                                <td>До 64 ТБ на том</td>
+                                <td>Автоматическое</td>
+                            </tr>
+                            <tr>
+                                <td>Применение</td>
+                                <td>Статические файлы, бэкапы, логи</td>
+                                <td>ОС-диски, базы данных</td>
+                                <td>Общие файлы, CMS</td>
+                            </tr>
+                            <tr>
+                                <td>Стоимость (примерная)</td>
+                                <td>$0.023/ГБ/мес (Standard)</td>
+                                <td>$0.08/ГБ/мес (gp3)</td>
+                                <td>$0.30/ГБ/мес (Standard)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> всегда включайте шифрование для хранилищ. S3 поддерживает SSE-S3 (серверное шифрование ключами AWS), SSE-KMS (управляемые ключи) и SSE-C (ваши собственные ключи). Для EBS включайте шифрование на уровне аккаунта &mdash; это можно сделать в настройках EC2 (&laquo;EBS encryption by default&raquo;), и все новые тома будут автоматически шифроваться.
+                </div>
+            </div>
+
+            <!-- ===== ВЫЧИСЛЕНИЯ ===== -->
+            <div class="section">
+                <p class="section-label">Compute</p>
+                <h2>Вычисления</h2>
+
+                <p>Amazon EC2 предлагает несколько моделей ценообразования, выбор между которыми может радикально повлиять на ваш бюджет. <strong>On-Demand</strong> &mdash; стандартная модель с почасовой или посекундной оплатой, без обязательств; подходит для непредсказуемых нагрузок, тестирования и разработки. <strong>Reserved Instances (RI)</strong> &mdash; обязательство на 1 или 3 года в обмен на скидку до 72%; идеально для стабильных, предсказуемых нагрузок (продакшн-серверы). <strong>Savings Plans</strong> &mdash; более гибкая альтернатива RI; вы обязуетесь тратить определённую сумму в час (например, $10/час) на вычислительные ресурсы, а AWS автоматически применяет скидку к любым подходящим инстансам. <strong>Spot Instances</strong> &mdash; использование незанятых мощностей AWS со скидкой до 90%; однако AWS может забрать инстанс с уведомлением за 2 минуты; подходит для batch-обработки, CI/CD-пайплайнов, обучения ML-моделей и любых нагрузок, устойчивых к прерываниям.</p>
+
+                <p><strong>Auto Scaling Groups (ASG)</strong> автоматически увеличивают или уменьшают количество EC2-инстансов в зависимости от нагрузки. ASG использует <strong>Launch Template</strong> &mdash; шаблон, определяющий параметры инстанса (AMI, тип инстанса, Security Groups, user data и т.д.). Вы задаёте минимальное и максимальное количество инстансов, а также политики масштабирования: Target Tracking (например, поддерживать средний CPU на уровне 60%), Step Scaling (при CPU &gt; 80% добавить 2 инстанса, при CPU &lt; 30% убрать 1) или Scheduled Scaling (увеличивать мощности в рабочие часы). ASG автоматически заменяет unhealthy-инстансы, распределяет инстансы по зонам доступности и интегрируется с балансировщиками нагрузки.</p>
+
+                <p><strong>Elastic Load Balancing</strong> распределяет входящий трафик между несколькими целями. <strong>ALB</strong> (Application Load Balancer) работает на уровне 7 (HTTP/HTTPS) и поддерживает маршрутизацию по пути (/api &rarr; backend, /static &rarr; CDN), по заголовкам, по hostname; это основной выбор для веб-приложений. <strong>NLB</strong> (Network Load Balancer) работает на уровне 4 (TCP/UDP), обеспечивает сверхнизкую задержку и миллионы запросов в секунду; используется для gRPC, TCP-сервисов, игровых серверов. <strong>AWS Lambda</strong> представляет собой serverless-вычисления: вы загружаете функцию (Python, Node.js, Go и др.), и AWS запускает её в ответ на события (HTTP-запрос через API Gateway, загрузка файла в S3, сообщение в SQS). Вы платите только за время выполнения (с точностью до миллисекунды) и количество вызовов. Lambda идеальна для event-driven архитектуры и микросервисов с непредсказуемой нагрузкой.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Создание Launch Template и Auto Scaling Group</div>
+                    <pre><code><span class="cm"># Создание Launch Template</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-launch-template</span> \
+    <span class="fl">--launch-template-name</span> <span class="st">web-server-template</span> \
+    <span class="fl">--launch-template-data</span> <span class="st">'{
+        "ImageId": "ami-0c02fb55956c7d316",
+        "InstanceType": "t3.micro",
+        "KeyName": "my-key",
+        "SecurityGroupIds": ["sg-0123456789abcdef0"],
+        "UserData": "IyEvYmluL2Jhc2gKeXVtIHVwZGF0ZSAteQp5dW0gaW5zdGFsbCAteSBuZ2lueApzeXN0ZW1jdGwgc3RhcnQgbmdpbng="
+    }'</span>
+
+<span class="cm"># Создание Auto Scaling Group</span>
+<span class="fn">aws</span> <span class="st">autoscaling</span> <span class="st">create-auto-scaling-group</span> \
+    <span class="fl">--auto-scaling-group-name</span> <span class="st">web-asg</span> \
+    <span class="fl">--launch-template</span> <span class="st">LaunchTemplateName=web-server-template,Version='$Latest'</span> \
+    <span class="fl">--min-size</span> <span class="fl">2</span> \
+    <span class="fl">--max-size</span> <span class="fl">6</span> \
+    <span class="fl">--desired-capacity</span> <span class="fl">2</span> \
+    <span class="fl">--vpc-zone-identifier</span> <span class="st">"subnet-aaa,subnet-bbb"</span> \
+    <span class="fl">--target-group-arns</span> <span class="st">"arn:aws:elasticloadbalancing:..."</span>
+
+<span class="cm"># Настройка Target Tracking Scaling Policy</span>
+<span class="fn">aws</span> <span class="st">autoscaling</span> <span class="st">put-scaling-policy</span> \
+    <span class="fl">--auto-scaling-group-name</span> <span class="st">web-asg</span> \
+    <span class="fl">--policy-name</span> <span class="st">cpu-target-tracking</span> \
+    <span class="fl">--policy-type</span> <span class="st">TargetTrackingScaling</span> \
+    <span class="fl">--target-tracking-configuration</span> <span class="st">'{
+        "PredefinedMetricSpecification": {
+            "PredefinedMetricType": "ASGAverageCPUUtilization"
+        },
+        "TargetValue": 60.0
+    }'</span></code></pre>
+                </div>
+
+                <h3>Сравнение моделей ценообразования EC2</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Модель</th>
+                                <th>Скидка</th>
+                                <th>Обязательства</th>
+                                <th>Применение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>On-Demand</td>
+                                <td>0%</td>
+                                <td>Нет</td>
+                                <td>Dev/test, непредсказуемая нагрузка</td>
+                            </tr>
+                            <tr>
+                                <td>Reserved (1 год)</td>
+                                <td>~40%</td>
+                                <td>1 год, конкретный тип</td>
+                                <td>Стабильный продакшн</td>
+                            </tr>
+                            <tr>
+                                <td>Reserved (3 года)</td>
+                                <td>~60&ndash;72%</td>
+                                <td>3 года, конкретный тип</td>
+                                <td>Долгосрочные проекты</td>
+                            </tr>
+                            <tr>
+                                <td>Savings Plans</td>
+                                <td>~40&ndash;72%</td>
+                                <td>1 или 3 года, $ в час</td>
+                                <td>Гибкий продакшн</td>
+                            </tr>
+                            <tr>
+                                <td>Spot Instances</td>
+                                <td>до 90%</td>
+                                <td>Нет (могут забрать)</td>
+                                <td>Batch, CI/CD, ML</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Оптимальная стратегия:</strong> комбинируйте модели ценообразования. Базовую стабильную нагрузку покрывайте Reserved Instances или Savings Plans. Пиковую нагрузку &mdash; On-Demand через Auto Scaling. Batch-задачи и CI/CD &mdash; на Spot Instances. Такой подход может снизить общие расходы на вычисления на 50&ndash;70%.
+                </div>
+            </div>
+
+            <!-- ===== GCP И AZURE ===== -->
+            <div class="section">
+                <p class="section-label">Альтернативные облака</p>
+                <h2>GCP и Azure &mdash; обзор</h2>
+
+                <p><strong>Google Cloud Platform (GCP)</strong> &mdash; третья по величине облачная платформа, выделяющаяся несколькими ключевыми преимуществами. GKE (Google Kubernetes Engine) считается лучшей управляемой платформой Kubernetes, что неудивительно, ведь Google &mdash; создатель Kubernetes. BigQuery &mdash; serverless-хранилище для аналитики петабайтных данных с оплатой за запрос. GCP также славится глобальной сетью Google, что обеспечивает низкую задержку между регионами. Модель ценообразования GCP отличается автоматическими скидками за непрерывное использование (sustained use discounts) и посекундной оплатой для вычислительных ресурсов. GCP часто выбирают стартапы, data-engineering команды и компании, активно использующие Kubernetes.</p>
+
+                <p><strong>Microsoft Azure</strong> &mdash; вторая по величине облачная платформа, особенно сильная в корпоративном сегменте. Глубокая интеграция с экосистемой Microsoft (Active Directory, Office 365, Windows Server, SQL Server, .NET) делает Azure естественным выбором для предприятий, уже использующих продукты Microsoft. AKS (Azure Kubernetes Service) &mdash; управляемый Kubernetes с бесплатным control plane. Azure DevOps &mdash; полноценная CI/CD-платформа, включающая репозитории, пайплайны и управление проектами. Azure Active Directory &mdash; корпоративный сервис идентификации, используемый миллионами организаций. Azure часто выбирают крупные предприятия, государственные организации и компании с существующей инфраструктурой Microsoft.</p>
+
+                <p>Выбор между провайдерами зависит от множества факторов: существующая экосистема (Microsoft &rarr; Azure), фокус на Kubernetes и data engineering (GCP), максимальное разнообразие сервисов и партнёров (AWS), требования к локализации данных и наличие регионов в нужных странах. На практике многие крупные компании используют мультиоблачную стратегию, размещая различные нагрузки у разных провайдеров. Для DevOps-инженера важно глубоко знать хотя бы одну платформу и иметь общее представление об остальных &mdash; концепции переносимы между облаками.</p>
+
+                <h3>Соответствие сервисов между облаками</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>AWS</th>
+                                <th>GCP</th>
+                                <th>Azure</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Виртуальные машины</td>
+                                <td>EC2</td>
+                                <td>Compute Engine</td>
+                                <td>Virtual Machines</td>
+                            </tr>
+                            <tr>
+                                <td>Kubernetes</td>
+                                <td>EKS</td>
+                                <td>GKE</td>
+                                <td>AKS</td>
+                            </tr>
+                            <tr>
+                                <td>Объектное хранилище</td>
+                                <td>S3</td>
+                                <td>Cloud Storage</td>
+                                <td>Blob Storage</td>
+                            </tr>
+                            <tr>
+                                <td>Управляемые БД</td>
+                                <td>RDS</td>
+                                <td>Cloud SQL</td>
+                                <td>Azure SQL</td>
+                            </tr>
+                            <tr>
+                                <td>Serverless-функции</td>
+                                <td>Lambda</td>
+                                <td>Cloud Functions</td>
+                                <td>Azure Functions</td>
+                            </tr>
+                            <tr>
+                                <td>Виртуальная сеть</td>
+                                <td>VPC</td>
+                                <td>VPC</td>
+                                <td>VNet</td>
+                            </tr>
+                            <tr>
+                                <td>CDN</td>
+                                <td>CloudFront</td>
+                                <td>Cloud CDN</td>
+                                <td>Azure CDN</td>
+                            </tr>
+                            <tr>
+                                <td>DNS</td>
+                                <td>Route 53</td>
+                                <td>Cloud DNS</td>
+                                <td>Azure DNS</td>
+                            </tr>
+                            <tr>
+                                <td>Контейнерный реестр</td>
+                                <td>ECR</td>
+                                <td>Artifact Registry</td>
+                                <td>Container Registry</td>
+                            </tr>
+                            <tr>
+                                <td>IAM</td>
+                                <td>IAM</td>
+                                <td>Cloud IAM</td>
+                                <td>Azure AD / RBAC</td>
+                            </tr>
+                            <tr>
+                                <td>Мониторинг</td>
+                                <td>CloudWatch</td>
+                                <td>Cloud Monitoring</td>
+                                <td>Azure Monitor</td>
+                            </tr>
+                            <tr>
+                                <td>IaC</td>
+                                <td>CloudFormation</td>
+                                <td>Deployment Manager</td>
+                                <td>ARM / Bicep</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Совет для карьеры:</strong> начните с AWS &mdash; на него приходится наибольшее количество вакансий. Сертификация AWS Solutions Architect Associate &mdash; одна из самых востребованных в индустрии. После освоения AWS изучение GCP или Azure займёт значительно меньше времени, так как концепции схожи.
+                </div>
+            </div>
+
+            <!-- ===== УПРАВЛЕНИЕ РАСХОДАМИ ===== -->
+            <div class="section">
+                <p class="section-label">Финансы</p>
+                <h2>Управление расходами</h2>
+
+                <p>Управление облачными расходами (FinOps) &mdash; критически важный навык для DevOps-инженера. Облако работает по модели pay-as-you-go, что означает: если вы забудете выключить ресурсы, счёт будет расти непрерывно. Первое, что нужно сделать после создания аккаунта &mdash; настроить <strong>Billing Alerts</strong> и <strong>Budgets</strong>. AWS Budgets позволяет установить лимит расходов и получать уведомления по email или в Slack при достижении определённого порога (например, 50%, 80%, 100% бюджета). Это спасёт вас от неприятных сюрпризов в конце месяца. Все три крупных провайдера предоставляют бесплатные уровни: AWS Free Tier включает 750 часов t2.micro/t3.micro в месяц, 5 ГБ S3, 750 часов RDS db.t2.micro (12 месяцев); некоторые сервисы бесплатны всегда (Lambda: 1 млн вызовов/мес, DynamoDB: 25 ГБ).</p>
+
+                <p><strong>AWS Cost Explorer</strong> &mdash; инструмент визуализации и анализа расходов. Он показывает детализацию по сервисам, регионам, аккаунтам и тегам. Используйте <strong>теги (tags)</strong> для всех ресурсов &mdash; это позволяет точно определить, какой проект или команда генерирует какие расходы. Рекомендуемый набор тегов: Environment (prod/staging/dev), Project, Team, Owner. AWS предоставляет рекомендации по <strong>right-sizing</strong> &mdash; оптимизации размеров инстансов на основе реального потребления. Если ваш m5.xlarge загружен на 10% CPU и использует 2 ГБ из 16 ГБ RAM, имеет смысл перейти на t3.medium и сэкономить 60%. <strong>AWS Trusted Advisor</strong> также даёт рекомендации по экономии: неиспользуемые EBS-тома, простаивающие Elastic IP, слишком большие инстансы.</p>
+
+                <p>Практические советы по экономии: всегда удаляйте неиспользуемые ресурсы (особенно EBS-тома, Elastic IP, старые снэпшоты, незанятые NAT Gateway); используйте Spot Instances для dev/test-сред и CI/CD; выбирайте правильные регионы (us-east-1 обычно самый дешёвый); используйте S3 Lifecycle Policies для автоматического перемещения старых данных в Glacier; настройте Auto Scaling с правильными пороговыми значениями, чтобы не переплачивать за простаивающие инстансы; рассмотрите Graviton-инстансы (ARM-процессоры AWS) &mdash; они на 20&ndash;40% дешевле при сопоставимой производительности. Для крупных организаций используйте AWS Organizations с консолидированным биллингом и SCPs для ограничения запуска дорогих типов инстансов.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Настройка бюджета и алертов через CLI</div>
+                    <pre><code><span class="cm"># Создание бюджета с лимитом $50/мес</span>
+<span class="fn">aws</span> <span class="st">budgets</span> <span class="st">create-budget</span> \
+    <span class="fl">--account-id</span> <span class="st">123456789012</span> \
+    <span class="fl">--budget</span> <span class="st">'{
+        "BudgetName": "Monthly-Limit",
+        "BudgetLimit": {"Amount": "50", "Unit": "USD"},
+        "TimeUnit": "MONTHLY",
+        "BudgetType": "COST"
+    }'</span> \
+    <span class="fl">--notifications-with-subscribers</span> <span class="st">'[
+        {
+            "Notification": {
+                "NotificationType": "ACTUAL",
+                "ComparisonOperator": "GREATER_THAN",
+                "Threshold": 80
+            },
+            "Subscribers": [
+                {"SubscriptionType": "EMAIL", "Address": "admin@example.com"}
+            ]
+        }
+    ]'</span>
+
+<span class="cm"># Просмотр текущих расходов</span>
+<span class="fn">aws</span> <span class="st">ce</span> <span class="st">get-cost-and-usage</span> \
+    <span class="fl">--time-period</span> <span class="st">Start=2024-01-01,End=2024-01-31</span> \
+    <span class="fl">--granularity</span> <span class="st">MONTHLY</span> \
+    <span class="fl">--metrics</span> <span class="st">"UnblendedCost"</span> \
+    <span class="fl">--group-by</span> <span class="st">Type=DIMENSION,Key=SERVICE</span>
+
+<span class="cm"># Поиск неиспользуемых EBS-томов</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">describe-volumes</span> \
+    <span class="fl">--filters</span> <span class="st">Name=status,Values=available</span> \
+    <span class="fl">--query</span> <span class="st">'Volumes[*].{ID:VolumeId,Size:Size,Created:CreateTime}'</span> \
+    <span class="fl">--output</span> <span class="st">table</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Защита от неожиданных счетов:</strong> сразу после создания AWS-аккаунта: 1) включите MFA на root-аккаунте; 2) создайте Budget с лимитом и email-уведомлениями; 3) установите AWS Nuke или cloud-nuke для автоматической очистки тестовых ресурсов; 4) никогда не храните Access Keys в публичных репозиториях &mdash; боты сканируют GitHub и создают ресурсы за секунды.
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <p class="section-label">Практика</p>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом разделе мы пройдём полный путь от создания AWS-аккаунта до развёртывания веб-сервера в облаке. Каждый шаг сопровождается подробными командами и объяснениями. Вам потребуется только браузер и терминал с установленным AWS CLI. Все ресурсы, которые мы создадим, попадают под AWS Free Tier, поэтому при своевременном удалении вы не заплатите ни цента.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 &mdash; Создание AWS-аккаунта и настройка безопасности</div>
+                    <p>Перейдите на <code>aws.amazon.com</code> и создайте аккаунт. После регистрации сразу выполните три критических действия: включите MFA на root-аккаунте (Security Credentials &rarr; MFA), создайте IAM-пользователя для повседневной работы и настройте billing alerts.</p>
+                    <div class="code-block">
+                        <div class="code-header">Настройка AWS CLI и IAM-пользователя</div>
+                        <pre><code><span class="cm"># Установка AWS CLI (Linux)</span>
+<span class="fn">curl</span> <span class="st">"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"</span> <span class="fl">-o</span> <span class="st">"awscliv2.zip"</span>
+<span class="fn">unzip</span> <span class="st">awscliv2.zip</span>
+<span class="fn">sudo</span> <span class="st">./aws/install</span>
+
+<span class="cm"># Создание IAM-пользователя (через AWS Console)</span>
+<span class="cm"># 1. IAM → Users → Create user</span>
+<span class="cm"># 2. Имя: admin-user</span>
+<span class="cm"># 3. Attach policy: AdministratorAccess</span>
+<span class="cm"># 4. Создайте Access Key для CLI</span>
+
+<span class="cm"># Настройка CLI с credentials</span>
+<span class="fn">aws</span> <span class="st">configure</span>
+<span class="cm"># AWS Access Key ID: AKIA...</span>
+<span class="cm"># AWS Secret Access Key: ...</span>
+<span class="cm"># Default region name: eu-west-1</span>
+<span class="cm"># Default output format: json</span>
+
+<span class="cm"># Проверка подключения</span>
+<span class="fn">aws</span> <span class="st">sts</span> <span class="st">get-caller-identity</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 &mdash; Создание VPC с публичной и приватной подсетями</div>
+                    <p>Создаём изолированную сетевую среду. VPC будет иметь два типа подсетей: публичную для веб-сервера и приватную для будущих баз данных. Internet Gateway обеспечит доступ из интернета к публичной подсети.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Создание VPC</span>
+<span class="fn">VPC_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-vpc</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.0.0/16</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=vpc,Tags=[{Key=Name,Value=devops-vpc}]'</span> \
+    <span class="fl">--query</span> <span class="st">'Vpc.VpcId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+<span class="fn">echo</span> <span class="st">"VPC: $VPC_ID"</span>
+
+<span class="cm"># Включение DNS hostnames</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">modify-vpc-attribute</span> \
+    <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span> \
+    <span class="fl">--enable-dns-hostnames</span>
+
+<span class="cm"># Создание Internet Gateway</span>
+<span class="fn">IGW_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-internet-gateway</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=internet-gateway,Tags=[{Key=Name,Value=devops-igw}]'</span> \
+    <span class="fl">--query</span> <span class="st">'InternetGateway.InternetGatewayId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">attach-internet-gateway</span> <span class="fl">--internet-gateway-id</span> <span class="st">$IGW_ID</span> <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span>
+
+<span class="cm"># Создание публичной подсети</span>
+<span class="fn">PUB_SUBNET</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-subnet</span> \
+    <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.1.0/24</span> \
+    <span class="fl">--availability-zone</span> <span class="st">eu-west-1a</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=subnet,Tags=[{Key=Name,Value=public-1a}]'</span> \
+    <span class="fl">--query</span> <span class="st">'Subnet.SubnetId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+
+<span class="cm"># Включение автоназначения публичного IP</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">modify-subnet-attribute</span> \
+    <span class="fl">--subnet-id</span> <span class="st">$PUB_SUBNET</span> \
+    <span class="fl">--map-public-ip-on-launch</span>
+
+<span class="cm"># Создание приватной подсети</span>
+<span class="fn">PRIV_SUBNET</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-subnet</span> \
+    <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span> \
+    <span class="fl">--cidr-block</span> <span class="st">10.0.10.0/24</span> \
+    <span class="fl">--availability-zone</span> <span class="st">eu-west-1a</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=subnet,Tags=[{Key=Name,Value=private-1a}]'</span> \
+    <span class="fl">--query</span> <span class="st">'Subnet.SubnetId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+
+<span class="cm"># Настройка таблицы маршрутизации для публичной подсети</span>
+<span class="fn">RTB_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-route-table</span> \
+    <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=route-table,Tags=[{Key=Name,Value=public-rtb}]'</span> \
+    <span class="fl">--query</span> <span class="st">'RouteTable.RouteTableId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-route</span> <span class="fl">--route-table-id</span> <span class="st">$RTB_ID</span> \
+    <span class="fl">--destination-cidr-block</span> <span class="st">0.0.0.0/0</span> <span class="fl">--gateway-id</span> <span class="st">$IGW_ID</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">associate-route-table</span> <span class="fl">--route-table-id</span> <span class="st">$RTB_ID</span> <span class="fl">--subnet-id</span> <span class="st">$PUB_SUBNET</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 &mdash; Запуск EC2-инстанса с Nginx</div>
+                    <p>Создаём Security Group, разрешающую SSH и HTTP-трафик, генерируем SSH-ключ и запускаем EC2-инстанс с автоматической установкой Nginx через user data.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Создание Security Group</span>
+<span class="fn">SG_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-security-group</span> \
+    <span class="fl">--group-name</span> <span class="st">web-server-sg</span> \
+    <span class="fl">--description</span> <span class="st">"Allow SSH and HTTP"</span> \
+    <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span> \
+    <span class="fl">--query</span> <span class="st">'GroupId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+
+<span class="cm"># Разрешить SSH (порт 22)</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">authorize-security-group-ingress</span> \
+    <span class="fl">--group-id</span> <span class="st">$SG_ID</span> \
+    <span class="fl">--protocol</span> <span class="st">tcp</span> <span class="fl">--port</span> <span class="fl">22</span> <span class="fl">--cidr</span> <span class="st">0.0.0.0/0</span>
+
+<span class="cm"># Разрешить HTTP (порт 80)</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">authorize-security-group-ingress</span> \
+    <span class="fl">--group-id</span> <span class="st">$SG_ID</span> \
+    <span class="fl">--protocol</span> <span class="st">tcp</span> <span class="fl">--port</span> <span class="fl">80</span> <span class="fl">--cidr</span> <span class="st">0.0.0.0/0</span>
+
+<span class="cm"># Создание SSH-ключа</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">create-key-pair</span> \
+    <span class="fl">--key-name</span> <span class="st">devops-key</span> \
+    <span class="fl">--query</span> <span class="st">'KeyMaterial'</span> <span class="fl">--output</span> <span class="st">text</span> > <span class="st">devops-key.pem</span>
+<span class="fn">chmod</span> <span class="fl">400</span> <span class="st">devops-key.pem</span>
+
+<span class="cm"># Подготовка user-data скрипта</span>
+<span class="fn">cat</span> > <span class="st">user-data.sh</span> << <span class="st">'EOF'</span>
+<span class="cm">#!/bin/bash</span>
+<span class="fn">yum</span> <span class="st">update</span> <span class="fl">-y</span>
+<span class="fn">yum</span> <span class="st">install</span> <span class="fl">-y</span> <span class="st">nginx</span>
+<span class="fn">systemctl</span> <span class="st">start</span> <span class="st">nginx</span>
+<span class="fn">systemctl</span> <span class="st">enable</span> <span class="st">nginx</span>
+
+<span class="cm"># Создание кастомной страницы</span>
+<span class="fn">cat</span> > <span class="st">/usr/share/nginx/html/index.html</span> << <span class="st">'HTMLEOF'</span>
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body style="background:#1a1a2e;color:#e0e0e0;text-align:center;padding:50px"&gt;
+&lt;h1&gt;DevOps Cloud Lab&lt;/h1&gt;
+&lt;p&gt;EC2 instance is running!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+<span class="st">HTMLEOF</span>
+<span class="st">EOF</span>
+
+<span class="cm"># Получение AMI ID (Amazon Linux 2023)</span>
+<span class="fn">AMI_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">describe-images</span> \
+    <span class="fl">--owners</span> <span class="st">amazon</span> \
+    <span class="fl">--filters</span> <span class="st">"Name=name,Values=al2023-ami-2023*-x86_64"</span> \
+    <span class="fl">--query</span> <span class="st">'sort_by(Images,&CreationDate)[-1].ImageId'</span> \
+    <span class="fl">--output</span> <span class="st">text</span>)
+
+<span class="cm"># Запуск EC2-инстанса</span>
+<span class="fn">INSTANCE_ID</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">run-instances</span> \
+    <span class="fl">--image-id</span> <span class="st">$AMI_ID</span> \
+    <span class="fl">--instance-type</span> <span class="st">t3.micro</span> \
+    <span class="fl">--key-name</span> <span class="st">devops-key</span> \
+    <span class="fl">--security-group-ids</span> <span class="st">$SG_ID</span> \
+    <span class="fl">--subnet-id</span> <span class="st">$PUB_SUBNET</span> \
+    <span class="fl">--user-data</span> <span class="st">file://user-data.sh</span> \
+    <span class="fl">--tag-specifications</span> <span class="st">'ResourceType=instance,Tags=[{Key=Name,Value=web-server}]'</span> \
+    <span class="fl">--query</span> <span class="st">'Instances[0].InstanceId'</span> <span class="fl">--output</span> <span class="st">text</span>)
+
+<span class="cm"># Ожидание запуска и получение публичного IP</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">wait</span> <span class="st">instance-running</span> <span class="fl">--instance-ids</span> <span class="st">$INSTANCE_ID</span>
+<span class="fn">PUBLIC_IP</span>=$(<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">describe-instances</span> \
+    <span class="fl">--instance-ids</span> <span class="st">$INSTANCE_ID</span> \
+    <span class="fl">--query</span> <span class="st">'Reservations[0].Instances[0].PublicIpAddress'</span> <span class="fl">--output</span> <span class="st">text</span>)
+<span class="fn">echo</span> <span class="st">"Web server: http://$PUBLIC_IP"</span>
+
+<span class="cm"># SSH-подключение к инстансу</span>
+<span class="fn">ssh</span> <span class="fl">-i</span> <span class="st">devops-key.pem</span> <span class="st">ec2-user@$PUBLIC_IP</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 &mdash; Создание S3-бакета для статического хостинга</div>
+                    <p>Создаём S3-корзину и настраиваем её для хостинга статического сайта. S3 Static Website Hosting &mdash; отличный способ разместить SPA-приложения, лендинги и документацию практически бесплатно.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Создание S3-корзины (имя должно быть глобально уникальным)</span>
+<span class="fn">BUCKET_NAME</span>=<span class="st">"devops-static-$(date +%s)"</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">mb</span> <span class="st">s3://$BUCKET_NAME</span> <span class="fl">--region</span> <span class="st">eu-west-1</span>
+
+<span class="cm"># Отключение блокировки публичного доступа</span>
+<span class="fn">aws</span> <span class="st">s3api</span> <span class="st">put-public-access-block</span> \
+    <span class="fl">--bucket</span> <span class="st">$BUCKET_NAME</span> \
+    <span class="fl">--public-access-block-configuration</span> <span class="st">'BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false'</span>
+
+<span class="cm"># Настройка Bucket Policy для публичного чтения</span>
+<span class="fn">aws</span> <span class="st">s3api</span> <span class="st">put-bucket-policy</span> <span class="fl">--bucket</span> <span class="st">$BUCKET_NAME</span> <span class="fl">--policy</span> <span class="st">"{
+    \"Version\": \"2012-10-17\",
+    \"Statement\": [{
+        \"Sid\": \"PublicRead\",
+        \"Effect\": \"Allow\",
+        \"Principal\": \"*\",
+        \"Action\": \"s3:GetObject\",
+        \"Resource\": \"arn:aws:s3:::$BUCKET_NAME/*\"
+    }]
+}"</span>
+
+<span class="cm"># Включение Static Website Hosting</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">website</span> <span class="st">s3://$BUCKET_NAME</span> \
+    <span class="fl">--index-document</span> <span class="st">index.html</span> \
+    <span class="fl">--error-document</span> <span class="st">error.html</span>
+
+<span class="cm"># Создание и загрузка index.html</span>
+<span class="fn">cat</span> > <span class="st">index.html</span> << <span class="st">'EOF'</span>
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;S3 Static Site&lt;/title&gt;&lt;/head&gt;
+&lt;body style="background:#1a1a2e;color:#e0e0e0;text-align:center;padding:50px"&gt;
+&lt;h1&gt;Static Site on S3&lt;/h1&gt;
+&lt;p&gt;Hosted on Amazon S3 Static Website Hosting&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+<span class="st">EOF</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">cp</span> <span class="st">index.html</span> <span class="st">s3://$BUCKET_NAME/</span> <span class="fl">--content-type</span> <span class="st">"text/html"</span>
+
+<span class="cm"># URL вашего статического сайта:</span>
+<span class="fn">echo</span> <span class="st">"http://$BUCKET_NAME.s3-website-eu-west-1.amazonaws.com"</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 &mdash; Очистка ресурсов</div>
+                    <p>Крайне важно удалить все созданные ресурсы после завершения практики, чтобы избежать неожиданных расходов. Удаляйте ресурсы в обратном порядке их создания.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Удаление EC2-инстанса</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">terminate-instances</span> <span class="fl">--instance-ids</span> <span class="st">$INSTANCE_ID</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">wait</span> <span class="st">instance-terminated</span> <span class="fl">--instance-ids</span> <span class="st">$INSTANCE_ID</span>
+
+<span class="cm"># Удаление S3-корзины</span>
+<span class="fn">aws</span> <span class="st">s3</span> <span class="st">rb</span> <span class="st">s3://$BUCKET_NAME</span> <span class="fl">--force</span>
+
+<span class="cm"># Удаление SSH-ключа</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-key-pair</span> <span class="fl">--key-name</span> <span class="st">devops-key</span>
+<span class="fn">rm</span> <span class="fl">-f</span> <span class="st">devops-key.pem</span>
+
+<span class="cm"># Удаление Security Group</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-security-group</span> <span class="fl">--group-id</span> <span class="st">$SG_ID</span>
+
+<span class="cm"># Удаление подсетей</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-subnet</span> <span class="fl">--subnet-id</span> <span class="st">$PUB_SUBNET</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-subnet</span> <span class="fl">--subnet-id</span> <span class="st">$PRIV_SUBNET</span>
+
+<span class="cm"># Удаление таблицы маршрутизации</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-route-table</span> <span class="fl">--route-table-id</span> <span class="st">$RTB_ID</span>
+
+<span class="cm"># Отсоединение и удаление Internet Gateway</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">detach-internet-gateway</span> <span class="fl">--internet-gateway-id</span> <span class="st">$IGW_ID</span> <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-internet-gateway</span> <span class="fl">--internet-gateway-id</span> <span class="st">$IGW_ID</span>
+
+<span class="cm"># Удаление VPC</span>
+<span class="fn">aws</span> <span class="st">ec2</span> <span class="st">delete-vpc</span> <span class="fl">--vpc-id</span> <span class="st">$VPC_ID</span>
+
+<span class="fn">echo</span> <span class="st">"Все ресурсы удалены!"</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Совет:</strong> если вы забыли, какие ресурсы создали, используйте AWS Resource Groups Tag Editor для поиска ресурсов по тегам. Всегда тегируйте ресурсы при создании (тег Environment=lab) &mdash; это позволит быстро найти и удалить всё после практики.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li><strong>Создайте многоуровневую VPC:</strong> постройте VPC с двумя публичными и двумя приватными подсетями в разных зонах доступности. Настройте Internet Gateway, NAT Gateway, таблицы маршрутизации и Security Groups. Запустите EC2-инстанс в приватной подсети и убедитесь, что он может выходить в интернет через NAT Gateway, но недоступен извне напрямую.</li>
+                    <li><strong>Настройте Auto Scaling с ALB:</strong> создайте Application Load Balancer, Target Group и Auto Scaling Group с Launch Template. Настройте политику масштабирования по CPU. Проведите нагрузочное тестирование с помощью <code>ab</code> или <code>wrk</code> и убедитесь, что ASG автоматически добавляет инстансы при повышении нагрузки.</li>
+                    <li><strong>Реализуйте IAM best practices:</strong> создайте организационную структуру IAM: группы Admins, Developers, ReadOnly. Создайте кастомные политики (JSON) для каждой группы. Настройте IAM-роль для EC2 с доступом к конкретному S3-бакету. Включите MFA и протестируйте политику, требующую MFA для определённых действий.</li>
+                    <li><strong>Постройте пайплайн CI/CD со статическим сайтом:</strong> создайте S3-бакет с Static Website Hosting и CloudFront-дистрибуцию перед ним. Настройте GitHub Actions (или AWS CodePipeline) для автоматического деплоя при пуше в main. Добавьте инвалидацию кэша CloudFront после деплоя.</li>
+                    <li><strong>Проведите аудит расходов:</strong> используя AWS Cost Explorer и CLI, проанализируйте расходы вашего аккаунта. Найдите неиспользуемые ресурсы (пустые EBS-тома, незанятые Elastic IP, старые снэпшоты). Настройте Budget с алертами. Составьте отчёт с рекомендациями по оптимизации.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Полезные ресурсы</h3>
+                <ul>
+                    <li>
+                        <a href="https://aws.amazon.com/getting-started/" target="_blank">AWS Getting Started</a>
+                        <div class="res-desc">Официальное руководство по началу работы с AWS: пошаговые туториалы, free tier, основные сервисы</div>
+                    </li>
+                    <li>
+                        <a href="https://cloud.google.com/docs" target="_blank">Google Cloud Documentation</a>
+                        <div class="res-desc">Полная документация GCP с quickstart-руководствами, архитектурными шаблонами и примерами</div>
+                    </li>
+                    <li>
+                        <a href="https://learn.microsoft.com/en-us/azure/" target="_blank">Microsoft Azure Learn</a>
+                        <div class="res-desc">Бесплатная платформа обучения Azure с интерактивными модулями, sandbox-средами и путями сертификации</div>
+                    </li>
+                    <li>
+                        <a href="https://aws.amazon.com/free/" target="_blank">AWS Free Tier</a>
+                        <div class="res-desc">Подробный список бесплатных сервисов AWS: Always Free, 12-Month Free и Trials</div>
+                    </li>
+                    <li>
+                        <a href="https://www.youtube.com/c/AWSEventsChannel" target="_blank">AWS Events &mdash; YouTube</a>
+                        <div class="res-desc">Записи конференций re:Invent, re:Inforce, AWS Summit с глубоким техническим контентом</div>
+                    </li>
+                    <li>
+                        <a href="https://github.com/open-guides/og-aws" target="_blank">Open Guide to AWS</a>
+                        <div class="res-desc">Практическое руководство по AWS от сообщества: советы, подводные камни, best practices для каждого сервиса</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== ОТМЕТКА ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="cloud">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== НАВИГАЦИЯ ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="kubernetes.html" class="nav-title">&larr; Kubernetes</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="monitoring.html" class="nav-title">Мониторинг &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

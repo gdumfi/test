@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI/CD — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">CI/CD</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>CI/CD</h1>
+            <p class="subtitle">Непрерывная интеграция и доставка — сердце DevOps-процессов</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Что такое CI/CD и почему это важно</h2>
+
+                <p>CI/CD (Continuous Integration / Continuous Delivery) — это набор практик и инструментов, которые автоматизируют процесс сборки, тестирования и доставки программного обеспечения. Вместо того чтобы вручную собирать проект, запускать тесты и выкладывать код на сервер, разработчики настраивают конвейер (pipeline), который делает всё это автоматически при каждом изменении кода. CI/CD — это не просто инструмент, а фундаментальная философия DevOps, которая связывает разработку и эксплуатацию в единый непрерывный процесс.</p>
+
+                <p>Зачем нужен CI/CD? Без автоматизации процесс доставки кода выглядит так: разработчик вносит изменения, вручную запускает тесты (или забывает это сделать), передаёт сборку операционной команде, которая вручную деплоит на сервер. Этот процесс медленный, подверженный ошибкам и не масштабируемый. С CI/CD каждый коммит автоматически проходит через конвейер проверок: код собирается, тестируется, проверяется на уязвимости, и при успехе — готов к деплою. Обратная связь приходит за минуты, а не за дни. Баги обнаруживаются на ранней стадии, когда их исправление стоит дёшево. Релизы становятся рутинной операцией, а не стрессовым событием.</p>
+
+                <p>Важно различать три связанных, но разных понятия:</p>
+
+                <div class="concept">
+                    <strong>Continuous Integration (непрерывная интеграция)</strong> — практика, при которой разработчики регулярно (несколько раз в день) вливают свои изменения в общую ветку. Каждое вливание автоматически собирается и тестируется. Цель — обнаруживать конфликты и ошибки интеграции как можно раньше.
+                </div>
+
+                <div class="concept">
+                    <strong>Continuous Delivery (непрерывная доставка)</strong> — расширение CI: после успешного прохождения всех проверок код автоматически подготавливается к релизу (собирается артефакт, Docker-образ и т.д.), но деплой в продакшен выполняется вручную по нажатию кнопки. Команда всегда имеет готовый к выпуску артефакт.
+                </div>
+
+                <div class="concept">
+                    <strong>Continuous Deployment (непрерывное развёртывание)</strong> — полная автоматизация: каждое изменение, прошедшее все проверки, автоматически попадает в продакшен без ручного вмешательства. Это высший уровень зрелости CI/CD, требующий отличного покрытия тестами и развитой культуры мониторинга.
+                </div>
+
+                <div class="note">
+                    <strong>Ключевая идея:</strong> CI/CD — это не конкретный инструмент, а практика. Вы можете реализовать CI/CD с помощью GitHub Actions, GitLab CI, Jenkins, CircleCI, TeamCity или любого другого инструмента. Главное — принцип: каждое изменение кода автоматически проверяется и подготавливается к выпуску.
+                </div>
+            </div>
+
+            <!-- ===== CONTINUOUS INTEGRATION ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Continuous Integration</h2>
+
+                <p>Continuous Integration — это практика, при которой каждый разработчик в команде регулярно интегрирует свой код в общий репозиторий. «Регулярно» означает как минимум один раз в день, а в идеале — несколько раз в день. При каждой интеграции автоматически запускается конвейер проверок, который включает сборку проекта, запуск тестов, статический анализ кода и другие проверки. Если любая из проверок не проходит, команда немедленно получает уведомление и исправляет проблему.</p>
+
+                <p>Что именно происходит в CI-конвейере? Типичный набор шагов выглядит следующим образом:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Этап</th>
+                                <th>Описание</th>
+                                <th>Инструменты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Build</strong></td>
+                                <td>Компиляция кода, установка зависимостей, сборка артефактов</td>
+                                <td>npm, pip, Maven, Go build, Docker build</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Unit-тесты</strong></td>
+                                <td>Проверка отдельных функций и модулей в изоляции</td>
+                                <td>pytest, Jest, JUnit, Go test</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Integration-тесты</strong></td>
+                                <td>Проверка взаимодействия компонентов между собой</td>
+                                <td>Testcontainers, Docker Compose</td>
+                            </tr>
+                            <tr>
+                                <td><strong>E2E-тесты</strong></td>
+                                <td>Сквозное тестирование всего приложения</td>
+                                <td>Cypress, Playwright, Selenium</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Lint</strong></td>
+                                <td>Проверка стиля и качества кода</td>
+                                <td>ESLint, Flake8, golangci-lint</td>
+                            </tr>
+                            <tr>
+                                <td><strong>SAST</strong></td>
+                                <td>Статический анализ безопасности — поиск уязвимостей в коде</td>
+                                <td>Semgrep, SonarQube, Snyk</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Почему маленькие и частые мержи лучше, чем большие? Представьте: разработчик уходит в отдельную ветку на две недели, пишет тысячи строк кода, а потом пытается влить всё обратно в main. Конфликтов будет десятки, тестирование займёт дни, и найти источник ошибки в таком объёме изменений практически невозможно. При частых малых мержах каждое изменение содержит 50-200 строк кода, конфликты минимальны, а если тест сломался — очевидно, что причина в последнем маленьком изменении.</p>
+
+                <p>Эта идея тесно связана с <strong>Trunk-Based Development</strong> — моделью ветвления, при которой все разработчики работают с одной основной веткой (trunk/main). Вместо долгоживущих feature-веток создаются короткоживущие ветки, которые живут не более 1-2 дней. Код вливается в main через pull request, проходит автоматические проверки CI и code review, после чего мержится. Feature flags используются для скрытия незавершённой функциональности в продакшене, позволяя деплоить недописанный код безопасно.</p>
+
+                <div class="note">
+                    <strong>Правило CI:</strong> если CI-конвейер упал — это приоритет номер один для всей команды. Сломанный конвейер означает, что никто не может интегрировать свой код. Культура «зелёного билда» — основа здоровой CI-практики. Не добавляйте новые коммиты поверх сломанного билда — сначала почините его.
+                </div>
+            </div>
+
+            <!-- ===== DELIVERY VS DEPLOYMENT ===== -->
+            <div class="section">
+                <h2>Continuous Delivery vs Continuous Deployment</h2>
+
+                <p>После этапа CI код прошёл все автоматические проверки и готов к выпуску. Дальнейший путь зависит от выбранной стратегии: Continuous Delivery или Continuous Deployment. Разница между ними — один клик, но философия различается принципиально.</p>
+
+                <p><strong>Continuous Delivery</strong> означает, что конвейер автоматически подготавливает релиз-кандидат: собирает Docker-образ, публикует его в реестре, обновляет манифесты деплоя. Однако финальный шаг — деплой в продакшен — выполняется вручную. Обычно это кнопка в интерфейсе CI-системы, которую нажимает релиз-менеджер или дежурный инженер. Такой подход даёт уверенность, что в продакшен попадёт именно то, что команда планировала выпустить, и позволяет координировать релизы с бизнес-требованиями.</p>
+
+                <p><strong>Continuous Deployment</strong> идёт дальше: каждое изменение, прошедшее все автоматические проверки, без какого-либо ручного вмешательства деплоится в продакшен. Это требует высочайшего уровня доверия к автоматическим тестам, развитой системы мониторинга и возможности быстрого отката. Компании вроде Netflix, Amazon и Facebook деплоят в продакшен тысячи раз в день именно благодаря Continuous Deployment.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Характеристика</th>
+                                <th>Continuous Delivery</th>
+                                <th>Continuous Deployment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Деплой в продакшен</td>
+                                <td>Ручной (по кнопке)</td>
+                                <td>Автоматический</td>
+                            </tr>
+                            <tr>
+                                <td>Требования к тестам</td>
+                                <td>Высокие</td>
+                                <td>Исключительно высокие</td>
+                            </tr>
+                            <tr>
+                                <td>Скорость доставки</td>
+                                <td>Часы/дни</td>
+                                <td>Минуты</td>
+                            </tr>
+                            <tr>
+                                <td>Контроль релизов</td>
+                                <td>Полный (approval gates)</td>
+                                <td>Автоматический (через тесты)</td>
+                            </tr>
+                            <tr>
+                                <td>Подходит для</td>
+                                <td>Регулируемых отраслей, финтех</td>
+                                <td>SaaS, веб-приложений</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><strong>Approval gates</strong> (шлюзы одобрения) — механизм контроля в Continuous Delivery. Перед деплоем в продакшен конвейер останавливается и ждёт одобрения от ответственного лица. Это может быть технический лид, релиз-менеджер или даже автоматическая система, проверяющая метрики staging-окружения. Approval gates особенно важны в регулируемых отраслях (финансы, медицина), где каждый релиз должен быть документирован и одобрен.</p>
+
+                <p>Когда выбирать Delivery, а когда Deployment? Начинайте с Continuous Delivery. Это безопаснее, проще внедрить и не требует идеального покрытия тестами с первого дня. Когда команда наберёт уверенность в своих тестах и мониторинге, можно постепенно переходить к Continuous Deployment — сначала для некритичных сервисов, потом для всех.</p>
+            </div>
+
+            <!-- ===== GITHUB ACTIONS ===== -->
+            <div class="section">
+                <div class="section-label">Инструменты CI/CD</div>
+                <h2>GitHub Actions</h2>
+
+                <p>GitHub Actions — это встроенная CI/CD-платформа GitHub, которая позволяет автоматизировать сборку, тестирование и деплой прямо из репозитория. Конфигурация описывается в YAML-файлах, которые хранятся в директории <code>.github/workflows/</code>. GitHub Actions стал стандартом де-факто для open-source проектов и многих коммерческих команд благодаря бесплатному тарифу для публичных репозиториев и тесной интеграции с GitHub.</p>
+
+                <h3>Структура workflow-файла</h3>
+
+                <p>Workflow (рабочий процесс) — это автоматизированная процедура, описанная в YAML-файле. Каждый workflow состоит из одного или нескольких <strong>jobs</strong> (заданий), которые по умолчанию выполняются параллельно. Каждый job состоит из <strong>steps</strong> (шагов), выполняющихся последовательно внутри одного виртуального окружения (runner). Steps могут быть командами оболочки (<code>run</code>) или готовыми действиями из маркетплейса (<code>uses</code>).</p>
+
+                <div class="code-block">
+                    <div class="code-header">Минимальный workflow — .github/workflows/ci.yml</div>
+                    <pre><code><span class="kw">name</span>: <span class="st">CI Pipeline</span>
+
+<span class="kw">on</span>:
+  <span class="kw">push</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span>, <span class="st">develop</span> ]
+  <span class="kw">pull_request</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+
+<span class="kw">jobs</span>:
+  <span class="fn">build-and-test</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="st">Setup Node.js</span>
+        <span class="kw">uses</span>: <span class="st">actions/setup-node@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">node-version</span>: <span class="st">'20'</span>
+
+      - <span class="kw">name</span>: <span class="st">Install dependencies</span>
+        <span class="kw">run</span>: <span class="st">npm ci</span>
+
+      - <span class="kw">name</span>: <span class="st">Run linter</span>
+        <span class="kw">run</span>: <span class="st">npm run lint</span>
+
+      - <span class="kw">name</span>: <span class="st">Run tests</span>
+        <span class="kw">run</span>: <span class="st">npm test</span></code></pre>
+                </div>
+
+                <h3>Триггеры (triggers)</h3>
+
+                <p>Workflow запускается при наступлении определённого события. GitHub Actions поддерживает десятки триггеров:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Основные триггеры</div>
+                    <pre><code><span class="kw">on</span>:
+  <span class="kw">push</span>:                          <span class="cm"># при push в указанные ветки</span>
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+    <span class="kw">paths</span>:                        <span class="cm"># только при изменении этих путей</span>
+      - <span class="st">'src/**'</span>
+      - <span class="st">'package.json'</span>
+
+  <span class="kw">pull_request</span>:                  <span class="cm"># при создании/обновлении PR</span>
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+    <span class="kw">types</span>: [ <span class="st">opened</span>, <span class="st">synchronize</span> ]
+
+  <span class="kw">schedule</span>:                      <span class="cm"># по расписанию (cron-формат, UTC)</span>
+    - <span class="kw">cron</span>: <span class="st">'0 2 * * 1'</span>          <span class="cm"># каждый понедельник в 02:00 UTC</span>
+
+  <span class="kw">workflow_dispatch</span>:              <span class="cm"># ручной запуск из интерфейса GitHub</span>
+    <span class="kw">inputs</span>:
+      <span class="kw">environment</span>:
+        <span class="kw">description</span>: <span class="st">'Target environment'</span>
+        <span class="kw">required</span>: <span class="st">true</span>
+        <span class="kw">default</span>: <span class="st">'staging'</span>
+        <span class="kw">type</span>: <span class="st">choice</span>
+        <span class="kw">options</span>: [ <span class="st">staging</span>, <span class="st">production</span> ]</code></pre>
+                </div>
+
+                <h3>Secrets и переменные окружения</h3>
+
+                <p>Секреты (пароли, токены, ключи) хранятся в настройках репозитория (Settings &rarr; Secrets and variables &rarr; Actions) и передаются в workflow через контекст <code>secrets</code>. Секреты маскируются в логах — даже если вы случайно выведете их через <code>echo</code>, GitHub заменит значение на <code>***</code>.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Использование секретов и переменных</div>
+                    <pre><code><span class="kw">jobs</span>:
+  <span class="fn">deploy</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">env</span>:                             <span class="cm"># переменные уровня job</span>
+      <span class="kw">NODE_ENV</span>: <span class="st">production</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="st">Login to Docker Hub</span>
+        <span class="kw">run</span>: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | \
+            docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - <span class="kw">name</span>: <span class="st">Deploy to server</span>
+        <span class="kw">env</span>:                           <span class="cm"># переменные уровня step</span>
+          <span class="kw">SSH_KEY</span>: ${{ secrets.SSH_PRIVATE_KEY }}
+        <span class="kw">run</span>: <span class="st">./deploy.sh</span></code></pre>
+                </div>
+
+                <h3>Environments</h3>
+
+                <p>GitHub Environments позволяют настроить правила деплоя для разных окружений (staging, production). Для каждого environment можно задать обязательных рецензентов (approval), таймер ожидания, ограничения по веткам и собственные секреты. Это реализация approval gates в GitHub Actions.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Использование environments</div>
+                    <pre><code><span class="kw">jobs</span>:
+  <span class="fn">deploy-staging</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">environment</span>: <span class="st">staging</span>            <span class="cm"># деплой в staging без одобрения</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">run</span>: <span class="st">./deploy.sh staging</span>
+
+  <span class="fn">deploy-production</span>:
+    <span class="kw">needs</span>: <span class="st">deploy-staging</span>
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">environment</span>: <span class="st">production</span>         <span class="cm"># требует одобрения рецензента</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">run</span>: <span class="st">./deploy.sh production</span></code></pre>
+                </div>
+
+                <h3>Matrix strategy</h3>
+
+                <p>Matrix strategy позволяет запускать один и тот же job с разными параметрами — например, тестировать на нескольких версиях Node.js или на разных операционных системах. GitHub автоматически создаёт отдельный runner для каждой комбинации параметров.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Тестирование на нескольких версиях и ОС</div>
+                    <pre><code><span class="kw">jobs</span>:
+  <span class="fn">test</span>:
+    <span class="kw">runs-on</span>: ${{ matrix.os }}
+    <span class="kw">strategy</span>:
+      <span class="kw">matrix</span>:
+        <span class="kw">os</span>: [ <span class="st">ubuntu-latest</span>, <span class="st">macos-latest</span> ]
+        <span class="kw">node-version</span>: [ <span class="st">18</span>, <span class="st">20</span>, <span class="st">22</span> ]
+      <span class="kw">fail-fast</span>: <span class="st">false</span>              <span class="cm"># не останавливать все при провале одного</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+      - <span class="kw">uses</span>: <span class="st">actions/setup-node@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">node-version</span>: ${{ matrix.node-version }}
+      - <span class="kw">run</span>: <span class="st">npm ci &amp;&amp; npm test</span></code></pre>
+                </div>
+
+                <h3>Кеширование и артефакты</h3>
+
+                <p>Кеширование ускоряет CI за счёт повторного использования зависимостей между запусками. Артефакты позволяют сохранять результаты сборки (бинарники, отчёты) и передавать их между jobs или скачивать после завершения workflow.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Кеширование зависимостей и артефакты</div>
+                    <pre><code><span class="kw">steps</span>:
+  - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+  - <span class="kw">name</span>: <span class="st">Cache node_modules</span>
+    <span class="kw">uses</span>: <span class="st">actions/cache@v4</span>
+    <span class="kw">with</span>:
+      <span class="kw">path</span>: <span class="st">~/.npm</span>
+      <span class="kw">key</span>: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      <span class="kw">restore-keys</span>: |
+        ${{ runner.os }}-node-
+
+  - <span class="kw">run</span>: <span class="st">npm ci &amp;&amp; npm run build</span>
+
+  - <span class="kw">name</span>: <span class="st">Upload build artifacts</span>
+    <span class="kw">uses</span>: <span class="st">actions/upload-artifact@v4</span>
+    <span class="kw">with</span>:
+      <span class="kw">name</span>: <span class="st">build-output</span>
+      <span class="kw">path</span>: <span class="st">dist/</span>
+      <span class="kw">retention-days</span>: <span class="st">7</span></code></pre>
+                </div>
+
+                <h3>Полный рабочий пример</h3>
+
+                <p>Ниже — полноценный CI/CD-конвейер для Node.js-приложения, который линтит код, запускает тесты, собирает Docker-образ, пушит его в GitHub Container Registry и деплоит через SSH.</p>
+
+                <div class="code-block">
+                    <div class="code-header">.github/workflows/ci-cd.yml — полный пример</div>
+                    <pre><code><span class="kw">name</span>: <span class="st">CI/CD Pipeline</span>
+
+<span class="kw">on</span>:
+  <span class="kw">push</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+  <span class="kw">pull_request</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+
+<span class="kw">env</span>:
+  <span class="kw">REGISTRY</span>: <span class="st">ghcr.io</span>
+  <span class="kw">IMAGE_NAME</span>: ${{ github.repository }}
+
+<span class="kw">jobs</span>:
+  <span class="cm"># --- Этап 1: Проверка кода ---</span>
+  <span class="fn">lint-and-test</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">uses</span>: <span class="st">actions/setup-node@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">node-version</span>: <span class="st">'20'</span>
+          <span class="kw">cache</span>: <span class="st">'npm'</span>
+
+      - <span class="kw">run</span>: <span class="st">npm ci</span>
+      - <span class="kw">run</span>: <span class="st">npm run lint</span>
+      - <span class="kw">run</span>: <span class="st">npm test -- --coverage</span>
+
+      - <span class="kw">name</span>: <span class="st">Upload coverage</span>
+        <span class="kw">uses</span>: <span class="st">actions/upload-artifact@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">name</span>: <span class="st">coverage-report</span>
+          <span class="kw">path</span>: <span class="st">coverage/</span>
+
+  <span class="cm"># --- Этап 2: Сборка и публикация Docker-образа ---</span>
+  <span class="fn">build-and-push</span>:
+    <span class="kw">needs</span>: <span class="st">lint-and-test</span>
+    <span class="kw">if</span>: <span class="st">github.event_name == 'push'</span>
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">permissions</span>:
+      <span class="kw">contents</span>: <span class="st">read</span>
+      <span class="kw">packages</span>: <span class="st">write</span>
+    <span class="kw">outputs</span>:
+      <span class="kw">image-tag</span>: ${{ steps.meta.outputs.tags }}
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="st">Log in to Container Registry</span>
+        <span class="kw">uses</span>: <span class="st">docker/login-action@v3</span>
+        <span class="kw">with</span>:
+          <span class="kw">registry</span>: ${{ env.REGISTRY }}
+          <span class="kw">username</span>: ${{ github.actor }}
+          <span class="kw">password</span>: ${{ secrets.GITHUB_TOKEN }}
+
+      - <span class="kw">name</span>: <span class="st">Extract metadata</span>
+        <span class="kw">id</span>: <span class="st">meta</span>
+        <span class="kw">uses</span>: <span class="st">docker/metadata-action@v5</span>
+        <span class="kw">with</span>:
+          <span class="kw">images</span>: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          <span class="kw">tags</span>: |
+            type=sha,prefix=
+
+      - <span class="kw">name</span>: <span class="st">Build and push</span>
+        <span class="kw">uses</span>: <span class="st">docker/build-push-action@v5</span>
+        <span class="kw">with</span>:
+          <span class="kw">context</span>: <span class="st">.</span>
+          <span class="kw">push</span>: <span class="st">true</span>
+          <span class="kw">tags</span>: ${{ steps.meta.outputs.tags }}
+          <span class="kw">labels</span>: ${{ steps.meta.outputs.labels }}
+
+  <span class="cm"># --- Этап 3: Деплой ---</span>
+  <span class="fn">deploy</span>:
+    <span class="kw">needs</span>: <span class="st">build-and-push</span>
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">environment</span>: <span class="st">production</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="st">Deploy via SSH</span>
+        <span class="kw">uses</span>: <span class="st">appleboy/ssh-action@v1</span>
+        <span class="kw">with</span>:
+          <span class="kw">host</span>: ${{ secrets.SERVER_HOST }}
+          <span class="kw">username</span>: ${{ secrets.SERVER_USER }}
+          <span class="kw">key</span>: ${{ secrets.SSH_PRIVATE_KEY }}
+          <span class="kw">script</span>: |
+            docker pull ${{ needs.build-and-push.outputs.image-tag }}
+            docker stop myapp || true
+            docker rm myapp || true
+            docker run -d --name myapp -p 80:3000 \
+              ${{ needs.build-and-push.outputs.image-tag }}</code></pre>
+                </div>
+            </div>
+
+            <!-- ===== GITLAB CI ===== -->
+            <div class="section">
+                <h2>GitLab CI</h2>
+
+                <p>GitLab CI/CD — встроенная система непрерывной интеграции и доставки GitLab. Конфигурация описывается в файле <code>.gitlab-ci.yml</code> в корне репозитория. GitLab CI исторически появился раньше GitHub Actions и предлагает более зрелую систему с встроенными реестрами контейнеров и пакетов, средой для review apps и мощной системой environments. GitLab CI особенно популярен в корпоративной среде, где GitLab часто устанавливается on-premise.</p>
+
+                <h3>Структура .gitlab-ci.yml</h3>
+
+                <p>Файл <code>.gitlab-ci.yml</code> определяет <strong>stages</strong> (стадии), которые выполняются последовательно, и <strong>jobs</strong> (задания), которые привязаны к стадиям. Все jobs внутри одной стадии выполняются параллельно. Если хотя бы один job на стадии упал — следующая стадия не запускается.</p>
+
+                <div class="code-block">
+                    <div class="code-header">.gitlab-ci.yml — полный пример</div>
+                    <pre><code><span class="kw">stages</span>:
+  - <span class="st">lint</span>
+  - <span class="st">test</span>
+  - <span class="st">build</span>
+  - <span class="st">deploy</span>
+
+<span class="kw">variables</span>:
+  <span class="kw">DOCKER_IMAGE</span>: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  <span class="kw">NODE_VERSION</span>: <span class="st">"20"</span>
+
+<span class="cm"># Глобальный кеш для всех jobs</span>
+<span class="kw">cache</span>:
+  <span class="kw">key</span>:
+    <span class="kw">files</span>:
+      - <span class="st">package-lock.json</span>
+  <span class="kw">paths</span>:
+    - <span class="st">node_modules/</span>
+
+<span class="cm"># --- Линтинг ---</span>
+<span class="fn">eslint</span>:
+  <span class="kw">stage</span>: <span class="st">lint</span>
+  <span class="kw">image</span>: <span class="st">node:${NODE_VERSION}</span>
+  <span class="kw">script</span>:
+    - <span class="fn">npm</span> ci
+    - <span class="fn">npm</span> run lint
+
+<span class="cm"># --- Тестирование ---</span>
+<span class="fn">unit-tests</span>:
+  <span class="kw">stage</span>: <span class="st">test</span>
+  <span class="kw">image</span>: <span class="st">node:${NODE_VERSION}</span>
+  <span class="kw">script</span>:
+    - <span class="fn">npm</span> ci
+    - <span class="fn">npm</span> test -- --coverage
+  <span class="kw">artifacts</span>:
+    <span class="kw">reports</span>:
+      <span class="kw">junit</span>: <span class="st">junit.xml</span>
+      <span class="kw">coverage_report</span>:
+        <span class="kw">coverage_format</span>: <span class="st">cobertura</span>
+        <span class="kw">path</span>: <span class="st">coverage/cobertura-coverage.xml</span>
+    <span class="kw">paths</span>:
+      - <span class="st">coverage/</span>
+    <span class="kw">expire_in</span>: <span class="st">7 days</span>
+
+<span class="fn">integration-tests</span>:
+  <span class="kw">stage</span>: <span class="st">test</span>
+  <span class="kw">image</span>: <span class="st">node:${NODE_VERSION}</span>
+  <span class="kw">services</span>:                          <span class="cm"># сервисы-контейнеры рядом с job</span>
+    - <span class="kw">name</span>: <span class="st">postgres:16</span>
+      <span class="kw">alias</span>: <span class="st">db</span>
+  <span class="kw">variables</span>:
+    <span class="kw">POSTGRES_DB</span>: <span class="st">testdb</span>
+    <span class="kw">POSTGRES_USER</span>: <span class="st">test</span>
+    <span class="kw">POSTGRES_PASSWORD</span>: <span class="st">testpass</span>
+    <span class="kw">DATABASE_URL</span>: <span class="st">postgresql://test:testpass@db:5432/testdb</span>
+  <span class="kw">script</span>:
+    - <span class="fn">npm</span> ci
+    - <span class="fn">npm</span> run test:integration
+
+<span class="cm"># --- Сборка Docker-образа ---</span>
+<span class="fn">docker-build</span>:
+  <span class="kw">stage</span>: <span class="st">build</span>
+  <span class="kw">image</span>: <span class="st">docker:24</span>
+  <span class="kw">services</span>:
+    - <span class="st">docker:24-dind</span>                  <span class="cm"># Docker-in-Docker для сборки</span>
+  <span class="kw">variables</span>:
+    <span class="kw">DOCKER_TLS_CERTDIR</span>: <span class="st">"/certs"</span>
+  <span class="kw">script</span>:
+    - <span class="fn">docker</span> login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - <span class="fn">docker</span> build -t $DOCKER_IMAGE .
+    - <span class="fn">docker</span> push $DOCKER_IMAGE
+  <span class="kw">rules</span>:                             <span class="cm"># аналог if в GitHub Actions</span>
+    - <span class="kw">if</span>: $CI_COMMIT_BRANCH == "main"
+
+<span class="cm"># --- Деплой ---</span>
+<span class="fn">deploy-production</span>:
+  <span class="kw">stage</span>: <span class="st">deploy</span>
+  <span class="kw">image</span>: <span class="st">alpine:latest</span>
+  <span class="kw">environment</span>:
+    <span class="kw">name</span>: <span class="st">production</span>
+    <span class="kw">url</span>: <span class="st">https://myapp.example.com</span>
+  <span class="kw">script</span>:
+    - <span class="fn">apk</span> add openssh-client
+    - <span class="fn">ssh</span> $SERVER_USER@$SERVER_HOST "docker pull $DOCKER_IMAGE &amp;&amp; docker-compose up -d"
+  <span class="kw">rules</span>:
+    - <span class="kw">if</span>: $CI_COMMIT_BRANCH == "main"
+      <span class="kw">when</span>: <span class="st">manual</span>                   <span class="cm"># ручной запуск (Continuous Delivery)</span></code></pre>
+                </div>
+
+                <h3>Сравнение GitLab CI и GitHub Actions</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Аспект</th>
+                                <th>GitHub Actions</th>
+                                <th>GitLab CI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Конфигурация</td>
+                                <td><code>.github/workflows/*.yml</code></td>
+                                <td><code>.gitlab-ci.yml</code></td>
+                            </tr>
+                            <tr>
+                                <td>Параллельность</td>
+                                <td>Jobs параллельны по умолчанию</td>
+                                <td>Jobs параллельны внутри стадии</td>
+                            </tr>
+                            <tr>
+                                <td>Экосистема</td>
+                                <td>Actions Marketplace</td>
+                                <td>Templates, includes</td>
+                            </tr>
+                            <tr>
+                                <td>Runner-ы</td>
+                                <td>GitHub-hosted + self-hosted</td>
+                                <td>Shared + self-hosted (GitLab Runner)</td>
+                            </tr>
+                            <tr>
+                                <td>Docker Registry</td>
+                                <td>ghcr.io (отдельно)</td>
+                                <td>Встроенный Container Registry</td>
+                            </tr>
+                            <tr>
+                                <td>On-premise</td>
+                                <td>GitHub Enterprise (дорого)</td>
+                                <td>GitLab CE бесплатно</td>
+                            </tr>
+                            <tr>
+                                <td>Условная логика</td>
+                                <td><code>if:</code> выражения</td>
+                                <td><code>rules:</code> / <code>only:</code> / <code>except:</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Совет:</strong> если ваш код на GitHub — используйте GitHub Actions. Если на GitLab — GitLab CI. Оба инструмента отлично справляются со своими задачами, и навыки переносятся между ними: YAML-синтаксис, логика конвейера и концепции (кеш, артефакты, environments) практически идентичны.
+                </div>
+            </div>
+
+            <!-- ===== JENKINS ===== -->
+            <div class="section">
+                <h2>Jenkins</h2>
+
+                <p>Jenkins — это исторически первый и до сих пор один из самых распространённых CI/CD-серверов с открытым исходным кодом. Написан на Java, запускается как самостоятельный сервер (обычно на выделенной машине или в контейнере), управляется через веб-интерфейс. Jenkins появился в 2011 году (как форк Hudson) и стал стандартом в индустрии задолго до появления GitHub Actions и GitLab CI. Его главная сила — огромная экосистема плагинов (более 1800) и полная гибкость настройки.</p>
+
+                <p>Современный Jenkins использует <strong>Jenkinsfile</strong> — файл в корне репозитория, описывающий конвейер как код (Pipeline as Code). Существуют два синтаксиса Jenkinsfile:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Jenkinsfile — Declarative Pipeline</div>
+                    <pre><code><span class="kw">pipeline</span> {
+    <span class="kw">agent</span> {
+        <span class="fn">docker</span> { <span class="kw">image</span> <span class="st">'node:20'</span> }
+    }
+
+    <span class="kw">environment</span> {
+        <span class="kw">CI</span> = <span class="st">'true'</span>
+        <span class="kw">DOCKER_REGISTRY</span> = <span class="st">'registry.example.com'</span>
+    }
+
+    <span class="kw">stages</span> {
+        <span class="kw">stage</span>(<span class="st">'Install'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">sh</span> <span class="st">'npm ci'</span>
+            }
+        }
+        <span class="kw">stage</span>(<span class="st">'Lint &amp; Test'</span>) {
+            <span class="kw">parallel</span> {                     <span class="cm">// параллельные стадии</span>
+                <span class="kw">stage</span>(<span class="st">'Lint'</span>) {
+                    <span class="kw">steps</span> { <span class="fn">sh</span> <span class="st">'npm run lint'</span> }
+                }
+                <span class="kw">stage</span>(<span class="st">'Test'</span>) {
+                    <span class="kw">steps</span> { <span class="fn">sh</span> <span class="st">'npm test'</span> }
+                }
+            }
+        }
+        <span class="kw">stage</span>(<span class="st">'Build'</span>) {
+            <span class="kw">steps</span> {
+                <span class="fn">sh</span> <span class="st">'npm run build'</span>
+            }
+        }
+        <span class="kw">stage</span>(<span class="st">'Deploy'</span>) {
+            <span class="kw">when</span> {
+                <span class="kw">branch</span> <span class="st">'main'</span>
+            }
+            <span class="kw">input</span> {
+                <span class="kw">message</span> <span class="st">'Deploy to production?'</span>
+                <span class="kw">ok</span> <span class="st">'Deploy'</span>
+            }
+            <span class="kw">steps</span> {
+                <span class="fn">sh</span> <span class="st">'./deploy.sh'</span>
+            }
+        }
+    }
+
+    <span class="kw">post</span> {
+        <span class="fn">always</span> {
+            <span class="fn">junit</span> <span class="st">'**/test-results/*.xml'</span>
+        }
+        <span class="fn">failure</span> {
+            <span class="fn">slackSend</span> <span class="kw">channel</span>: <span class="st">'#ci-alerts'</span>,
+                <span class="kw">message</span>: <span class="st">"Build failed: ${env.BUILD_URL}"</span>
+        }
+    }
+}</code></pre>
+                </div>
+
+                <p><strong>Declarative Pipeline</strong> — структурированный синтаксис с заранее определёнными блоками (pipeline, agent, stages, steps, post). Рекомендуется для большинства случаев. <strong>Scripted Pipeline</strong> — полноценный Groovy-код, даёт максимальную гибкость, но сложнее для чтения и поддержки. Используется, когда декларативный синтаксис не позволяет выразить нужную логику.</p>
+
+                <p><strong>Shared Libraries</strong> — механизм повторного использования кода в Jenkins. Общие функции (например, шаблон сборки Docker-образа или отправки уведомлений) выносятся в отдельный Git-репозиторий и подключаются к конвейерам через аннотацию <code>@Library</code>. Это позволяет стандартизировать CI/CD-процессы в организации.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Когда использовать Jenkins</th>
+                                <th>Когда выбрать облачный CI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Сложная корпоративная среда</td>
+                                <td>Стартап или небольшая команда</td>
+                            </tr>
+                            <tr>
+                                <td>Строгие требования к безопасности (on-premise)</td>
+                                <td>Код уже на GitHub/GitLab</td>
+                            </tr>
+                            <tr>
+                                <td>Нестандартные конвейеры и интеграции</td>
+                                <td>Стандартные build-test-deploy процессы</td>
+                            </tr>
+                            <tr>
+                                <td>Уже есть Jenkins-инфраструктура</td>
+                                <td>Не хочется управлять CI-сервером</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Тенденция:</strong> Jenkins постепенно уступает позиции облачным CI-системам (GitHub Actions, GitLab CI). Однако в крупных компаниях с legacy-инфраструктурой Jenkins по-прежнему является основным CI-инструментом. Знание Jenkins остаётся ценным навыком на рынке DevOps.
+                </div>
+            </div>
+
+            <!-- ===== СТРАТЕГИИ ДЕПЛОЯ ===== -->
+            <div class="section">
+                <div class="section-label">Стратегии</div>
+                <h2>Стратегии деплоя</h2>
+
+                <p>Стратегия деплоя определяет, как именно новая версия приложения заменяет старую в продакшен-окружении. Выбор стратегии зависит от требований к доступности, допустимого риска, скорости отката и ресурсов инфраструктуры. Неправильно выбранная стратегия может привести к простою сервиса или потере данных, поэтому понимание каждого подхода — обязательный навык DevOps-инженера.</p>
+
+                <h3>Rolling Update (постепенное обновление)</h3>
+
+                <p>При rolling update экземпляры приложения обновляются по одному (или небольшими группами). Старые поды/контейнеры постепенно заменяются новыми. В любой момент времени часть экземпляров работает на старой версии, часть — на новой. Это стратегия по умолчанию в Kubernetes.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Плюсы</th>
+                                <th>Минусы</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Нулевой простой (zero downtime)</td>
+                                <td>Во время обновления работают две версии одновременно</td>
+                            </tr>
+                            <tr>
+                                <td>Не требует двойных ресурсов</td>
+                                <td>Откат медленный (обратный rolling update)</td>
+                            </tr>
+                            <tr>
+                                <td>Просто настраивается</td>
+                                <td>Проблемы совместимости API между версиями</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Blue-Green Deployment (сине-зелёное развёртывание)</h3>
+
+                <p>Поддерживаются два идентичных окружения: Blue (текущая продакшен-версия) и Green (новая версия). Новая версия деплоится в Green-окружение, тестируется, и если всё в порядке — балансировщик нагрузки переключает трафик с Blue на Green. Старое Blue-окружение остаётся нетронутым и служит мгновенным откатом.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Плюсы</th>
+                                <th>Минусы</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Мгновенный откат (переключение трафика)</td>
+                                <td>Требует двойных ресурсов инфраструктуры</td>
+                            </tr>
+                            <tr>
+                                <td>Можно протестировать в продакшен-окружении</td>
+                                <td>Сложнее с базами данных (миграции)</td>
+                            </tr>
+                            <tr>
+                                <td>Нет смешения версий</td>
+                                <td>Более высокая стоимость</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Canary Release (канареечный релиз)</h3>
+
+                <p>Новая версия разворачивается для небольшого процента пользователей (например, 5%). Если метрики (ошибки, задержки, конверсия) в пределах нормы — трафик постепенно увеличивается: 5% &rarr; 25% &rarr; 50% &rarr; 100%. Если метрики деградируют — весь трафик мгновенно возвращается на старую версию. Название происходит от практики шахтёров, которые брали канарейку в шахту для обнаружения ядовитого газа.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Плюсы</th>
+                                <th>Минусы</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Минимальный риск: затрагивает малую долю пользователей</td>
+                                <td>Сложнее настроить (нужен умный балансировщик)</td>
+                            </tr>
+                            <tr>
+                                <td>Тестирование на реальном трафике</td>
+                                <td>Требует хорошей системы мониторинга</td>
+                            </tr>
+                            <tr>
+                                <td>Автоматический откат по метрикам</td>
+                                <td>Более длительный процесс выкатки</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>A/B Testing</h3>
+
+                <p>Похоже на canary, но цель другая: не проверка стабильности, а сравнение бизнес-метрик двух версий. Трафик разделяется по определённому критерию (гео-локация, тип устройства, сегмент пользователей), и каждая группа получает свою версию. Результаты анализируются статистически, и побеждает версия с лучшими метриками. A/B-тестирование — это больше продуктовая, чем инфраструктурная стратегия, но DevOps-инженер должен уметь настроить соответствующую инфраструктуру.</p>
+
+                <h3>Стратегии отката (Rollback)</h3>
+
+                <p>Каждая стратегия деплоя подразумевает способ отката:</p>
+
+                <div class="concept">
+                    <strong>Rolling update:</strong> обратный rolling update (замена новых подов на старые) или <code>kubectl rollout undo</code> в Kubernetes. Медленный, но простой.
+                </div>
+
+                <div class="concept">
+                    <strong>Blue-Green:</strong> мгновенный откат — переключение балансировщика обратно на Blue-окружение. Самый быстрый способ отката.
+                </div>
+
+                <div class="concept">
+                    <strong>Canary:</strong> установка веса новой версии в 0% и маршрутизация всего трафика на старую версию. Может быть автоматизирован на основе метрик.
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> откат — это не только замена кода. Если новая версия выполнила миграцию базы данных, откат кода без обратной миграции данных может привести к несовместимости. Поэтому миграции должны быть обратно совместимыми: сначала добавляем новое поле (не удаляя старое), деплоим код, убеждаемся в стабильности, и только потом удаляем старое поле в следующем релизе.
+                </div>
+            </div>
+
+            <!-- ===== ARGOCD И GITOPS ===== -->
+            <div class="section">
+                <h2>ArgoCD и GitOps</h2>
+
+                <p><strong>GitOps</strong> — это подход к управлению инфраструктурой и доставке приложений, при котором Git-репозиторий является единственным источником истины (single source of truth) для желаемого состояния системы. Вместо того чтобы выполнять команды деплоя вручную или через CI-скрипты, вы описываете желаемое состояние кластера в Git (Kubernetes-манифесты, Helm-чарты, Kustomize-конфигурации), а специальный контроллер автоматически приводит реальное состояние к желаемому.</p>
+
+                <p>Принципы GitOps:</p>
+
+                <div class="concept">
+                    <strong>Декларативность:</strong> вся система описана декларативно (что должно быть, а не как этого достичь). Kubernetes-манифесты — идеальный пример декларативного описания.
+                </div>
+
+                <div class="concept">
+                    <strong>Версионирование:</strong> желаемое состояние хранится в Git, что обеспечивает полную историю изменений, code review, аудит и возможность отката к любой точке в истории через <code>git revert</code>.
+                </div>
+
+                <div class="concept">
+                    <strong>Автоматическое применение:</strong> специальный агент (ArgoCD, Flux) постоянно сравнивает желаемое состояние из Git с реальным состоянием кластера и автоматически устраняет расхождения (drift detection).
+                </div>
+
+                <p><strong>ArgoCD</strong> — самый популярный инструмент для реализации GitOps в Kubernetes. Он устанавливается в кластер как набор контроллеров и предоставляет веб-интерфейс для визуализации состояния приложений. Основная абстракция — <strong>Application</strong>, которая связывает Git-репозиторий (источник) с namespace в кластере (назначение).</p>
+
+                <div class="code-block">
+                    <div class="code-header">ArgoCD Application — пример манифеста</div>
+                    <pre><code><span class="kw">apiVersion</span>: <span class="st">argoproj.io/v1alpha1</span>
+<span class="kw">kind</span>: <span class="st">Application</span>
+<span class="kw">metadata</span>:
+  <span class="kw">name</span>: <span class="st">myapp</span>
+  <span class="kw">namespace</span>: <span class="st">argocd</span>
+<span class="kw">spec</span>:
+  <span class="kw">project</span>: <span class="st">default</span>
+  <span class="kw">source</span>:
+    <span class="kw">repoURL</span>: <span class="st">https://github.com/myorg/k8s-manifests.git</span>
+    <span class="kw">targetRevision</span>: <span class="st">main</span>
+    <span class="kw">path</span>: <span class="st">apps/myapp/overlays/production</span>
+  <span class="kw">destination</span>:
+    <span class="kw">server</span>: <span class="st">https://kubernetes.default.svc</span>
+    <span class="kw">namespace</span>: <span class="st">myapp</span>
+  <span class="kw">syncPolicy</span>:
+    <span class="kw">automated</span>:                         <span class="cm"># автоматическая синхронизация</span>
+      <span class="kw">prune</span>: <span class="st">true</span>                       <span class="cm"># удалять ресурсы, которых нет в Git</span>
+      <span class="kw">selfHeal</span>: <span class="st">true</span>                    <span class="cm"># восстанавливать при ручных изменениях</span>
+    <span class="kw">syncOptions</span>:
+      - <span class="st">CreateNamespace=true</span></code></pre>
+                </div>
+
+                <p>Как работает связка CI + ArgoCD: CI-конвейер (GitHub Actions / GitLab CI) собирает Docker-образ, пушит его в реестр и обновляет тег образа в Git-репозитории с манифестами. ArgoCD обнаруживает изменение в Git и автоматически применяет новые манифесты к кластеру. Таким образом, CI отвечает за сборку, а ArgoCD — за доставку. Это разделение ответственности упрощает архитектуру и повышает безопасность: CI не нуждается в прямом доступе к кластеру.</p>
+
+                <div class="note">
+                    <strong>Преимущество GitOps:</strong> если кто-то вручную изменит ресурс в кластере (через <code>kubectl edit</code>), ArgoCD обнаружит расхождение с Git и автоматически вернёт ресурс к декларированному состоянию. Это исключает «ручные хотфиксы» и обеспечивает, что Git всегда отражает реальное состояние системы.
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>Создадим полноценный CI/CD-конвейер на GitHub Actions для Node.js-приложения. Конвейер будет выполнять следующие шаги: lint &rarr; test &rarr; build Docker image &rarr; push to registry &rarr; deploy. Каждый шаг подробно объяснён.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 — Подготовка проекта</div>
+                    <p>Создадим простое Express-приложение с линтером и тестами. Это минимальная структура, которая демонстрирует все этапы CI/CD.</p>
+                    <div class="code-block">
+                        <div class="code-header">Структура проекта</div>
+                        <pre><code>myapp/
+  src/
+    index.js            <span class="cm"># Express-сервер</span>
+    health.js           <span class="cm"># Health-check endpoint</span>
+  tests/
+    health.test.js      <span class="cm"># Тесты</span>
+  Dockerfile
+  package.json
+  .eslintrc.json
+  .github/
+    workflows/
+      ci-cd.yml         <span class="cm"># CI/CD-конвейер</span></code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">package.json</div>
+                        <pre><code>{
+  <span class="st">"name"</span>: <span class="st">"myapp"</span>,
+  <span class="st">"version"</span>: <span class="st">"1.0.0"</span>,
+  <span class="st">"scripts"</span>: {
+    <span class="st">"start"</span>: <span class="st">"node src/index.js"</span>,
+    <span class="st">"lint"</span>: <span class="st">"eslint src/ tests/"</span>,
+    <span class="st">"test"</span>: <span class="st">"jest --coverage"</span>
+  },
+  <span class="st">"dependencies"</span>: {
+    <span class="st">"express"</span>: <span class="st">"^4.18.0"</span>
+  },
+  <span class="st">"devDependencies"</span>: {
+    <span class="st">"eslint"</span>: <span class="st">"^8.50.0"</span>,
+    <span class="st">"jest"</span>: <span class="st">"^29.7.0"</span>,
+    <span class="st">"supertest"</span>: <span class="st">"^6.3.0"</span>
+  }
+}</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">src/index.js</div>
+                        <pre><code><span class="kw">const</span> express = <span class="fn">require</span>(<span class="st">'express'</span>);
+<span class="kw">const</span> health = <span class="fn">require</span>(<span class="st">'./health'</span>);
+
+<span class="kw">const</span> app = <span class="fn">express</span>();
+<span class="kw">const</span> PORT = process.env.PORT || <span class="st">3000</span>;
+
+app.<span class="fn">get</span>(<span class="st">'/'</span>, (req, res) =&gt; {
+  res.<span class="fn">json</span>({ <span class="kw">message</span>: <span class="st">'Hello, CI/CD!'</span> });
+});
+
+app.<span class="fn">get</span>(<span class="st">'/health'</span>, health);
+
+<span class="kw">if</span> (require.main === module) {
+  app.<span class="fn">listen</span>(PORT, () =&gt; {
+    console.<span class="fn">log</span>(<span class="st">`Server running on port ${PORT}`</span>);
+  });
+}
+
+module.exports = app;</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">src/health.js</div>
+                        <pre><code>module.exports = (req, res) =&gt; {
+  res.<span class="fn">json</span>({
+    <span class="kw">status</span>: <span class="st">'ok'</span>,
+    <span class="kw">uptime</span>: process.<span class="fn">uptime</span>(),
+    <span class="kw">timestamp</span>: <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>()
+  });
+};</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">tests/health.test.js</div>
+                        <pre><code><span class="kw">const</span> request = <span class="fn">require</span>(<span class="st">'supertest'</span>);
+<span class="kw">const</span> app = <span class="fn">require</span>(<span class="st">'../src/index'</span>);
+
+<span class="fn">describe</span>(<span class="st">'GET /health'</span>, () =&gt; {
+  <span class="fn">it</span>(<span class="st">'should return status ok'</span>, <span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">request</span>(app).<span class="fn">get</span>(<span class="st">'/health'</span>);
+    <span class="fn">expect</span>(res.statusCode).<span class="fn">toBe</span>(<span class="st">200</span>);
+    <span class="fn">expect</span>(res.body.status).<span class="fn">toBe</span>(<span class="st">'ok'</span>);
+    <span class="fn">expect</span>(res.body).<span class="fn">toHaveProperty</span>(<span class="st">'uptime'</span>);
+    <span class="fn">expect</span>(res.body).<span class="fn">toHaveProperty</span>(<span class="st">'timestamp'</span>);
+  });
+});</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 — Создание Dockerfile</div>
+                    <p>Создадим оптимизированный multi-stage Dockerfile. Первая стадия устанавливает зависимости, вторая — копирует только необходимые файлы для продакшена. Это минимизирует размер финального образа.</p>
+                    <div class="code-block">
+                        <div class="code-header">Dockerfile</div>
+                        <pre><code><span class="cm"># --- Стадия 1: установка зависимостей ---</span>
+<span class="kw">FROM</span> node:20-alpine <span class="kw">AS</span> deps
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> package*.json ./
+<span class="kw">RUN</span> npm ci --only=production
+
+<span class="cm"># --- Стадия 2: финальный образ ---</span>
+<span class="kw">FROM</span> node:20-alpine
+<span class="kw">WORKDIR</span> /app
+
+<span class="kw">RUN</span> addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
+
+<span class="kw">COPY</span> --from=deps /app/node_modules ./node_modules
+<span class="kw">COPY</span> src/ ./src/
+<span class="kw">COPY</span> package.json ./
+
+<span class="kw">USER</span> appuser
+<span class="kw">EXPOSE</span> 3000
+
+<span class="kw">HEALTHCHECK</span> --interval=30s --timeout=3s --retries=3 \
+  <span class="kw">CMD</span> wget --spider -q http://localhost:3000/health || exit 1
+
+<span class="kw">CMD</span> [<span class="st">"node"</span>, <span class="st">"src/index.js"</span>]</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 — Создание CI/CD-конвейера</div>
+                    <p>Главный файл конвейера. Он состоит из трёх jobs: <code>lint-and-test</code> (проверка кода), <code>build-and-push</code> (сборка и публикация Docker-образа) и <code>deploy</code> (деплой на сервер). Jobs выполняются последовательно — каждый следующий зависит от успешного завершения предыдущего.</p>
+                    <div class="code-block">
+                        <div class="code-header">.github/workflows/ci-cd.yml</div>
+                        <pre><code><span class="kw">name</span>: <span class="st">CI/CD Pipeline</span>
+
+<span class="kw">on</span>:
+  <span class="kw">push</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+  <span class="kw">pull_request</span>:
+    <span class="kw">branches</span>: [ <span class="st">main</span> ]
+
+<span class="kw">env</span>:
+  <span class="kw">REGISTRY</span>: <span class="st">ghcr.io</span>
+  <span class="kw">IMAGE_NAME</span>: ${{ github.repository }}
+
+<span class="kw">jobs</span>:
+  <span class="cm"># ==========================================</span>
+  <span class="cm"># Job 1: Lint + Test</span>
+  <span class="cm"># ==========================================</span>
+  <span class="fn">lint-and-test</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="st">Checkout code</span>
+        <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="st">Setup Node.js</span>
+        <span class="kw">uses</span>: <span class="st">actions/setup-node@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">node-version</span>: <span class="st">'20'</span>
+          <span class="kw">cache</span>: <span class="st">'npm'</span>
+
+      - <span class="kw">name</span>: <span class="st">Install dependencies</span>
+        <span class="kw">run</span>: <span class="st">npm ci</span>
+
+      - <span class="kw">name</span>: <span class="st">Run ESLint</span>
+        <span class="kw">run</span>: <span class="st">npm run lint</span>
+
+      - <span class="kw">name</span>: <span class="st">Run tests with coverage</span>
+        <span class="kw">run</span>: <span class="st">npm test -- --coverage</span>
+
+      - <span class="kw">name</span>: <span class="st">Upload coverage report</span>
+        <span class="kw">uses</span>: <span class="st">actions/upload-artifact@v4</span>
+        <span class="kw">if</span>: <span class="st">always()</span>
+        <span class="kw">with</span>:
+          <span class="kw">name</span>: <span class="st">coverage-report</span>
+          <span class="kw">path</span>: <span class="st">coverage/</span>
+
+  <span class="cm"># ==========================================</span>
+  <span class="cm"># Job 2: Build Docker Image + Push to Registry</span>
+  <span class="cm"># ==========================================</span>
+  <span class="fn">build-and-push</span>:
+    <span class="kw">needs</span>: <span class="st">lint-and-test</span>            <span class="cm"># ждать успешного завершения job 1</span>
+    <span class="kw">if</span>: <span class="st">github.event_name == 'push' &amp;&amp; github.ref == 'refs/heads/main'</span>
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">permissions</span>:
+      <span class="kw">contents</span>: <span class="st">read</span>
+      <span class="kw">packages</span>: <span class="st">write</span>
+    <span class="kw">outputs</span>:
+      <span class="kw">image-tag</span>: ${{ steps.meta.outputs.tags }}
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="st">Checkout code</span>
+        <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="st">Log in to GitHub Container Registry</span>
+        <span class="kw">uses</span>: <span class="st">docker/login-action@v3</span>
+        <span class="kw">with</span>:
+          <span class="kw">registry</span>: ${{ env.REGISTRY }}
+          <span class="kw">username</span>: ${{ github.actor }}
+          <span class="kw">password</span>: ${{ secrets.GITHUB_TOKEN }}
+
+      - <span class="kw">name</span>: <span class="st">Extract Docker metadata</span>
+        <span class="kw">id</span>: <span class="st">meta</span>
+        <span class="kw">uses</span>: <span class="st">docker/metadata-action@v5</span>
+        <span class="kw">with</span>:
+          <span class="kw">images</span>: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          <span class="kw">tags</span>: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - <span class="kw">name</span>: <span class="st">Build and push Docker image</span>
+        <span class="kw">uses</span>: <span class="st">docker/build-push-action@v5</span>
+        <span class="kw">with</span>:
+          <span class="kw">context</span>: <span class="st">.</span>
+          <span class="kw">push</span>: <span class="st">true</span>
+          <span class="kw">tags</span>: ${{ steps.meta.outputs.tags }}
+          <span class="kw">labels</span>: ${{ steps.meta.outputs.labels }}
+
+  <span class="cm"># ==========================================</span>
+  <span class="cm"># Job 3: Deploy to Server</span>
+  <span class="cm"># ==========================================</span>
+  <span class="fn">deploy</span>:
+    <span class="kw">needs</span>: <span class="st">build-and-push</span>           <span class="cm"># ждать успешного завершения job 2</span>
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">environment</span>: <span class="st">production</span>          <span class="cm"># approval gate</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">name</span>: <span class="st">Deploy to production server</span>
+        <span class="kw">uses</span>: <span class="st">appleboy/ssh-action@v1</span>
+        <span class="kw">with</span>:
+          <span class="kw">host</span>: ${{ secrets.SERVER_HOST }}
+          <span class="kw">username</span>: ${{ secrets.SERVER_USER }}
+          <span class="kw">key</span>: ${{ secrets.SSH_PRIVATE_KEY }}
+          <span class="kw">script</span>: |
+            <span class="cm"># Pull the new image</span>
+            docker pull ${{ needs.build-and-push.outputs.image-tag }}
+
+            <span class="cm"># Stop and remove old container</span>
+            docker stop myapp 2&gt;/dev/null || true
+            docker rm myapp 2&gt;/dev/null || true
+
+            <span class="cm"># Start new container</span>
+            docker run -d \
+              --name myapp \
+              --restart unless-stopped \
+              -p 80:3000 \
+              ${{ needs.build-and-push.outputs.image-tag }}
+
+            <span class="cm"># Wait and verify health</span>
+            sleep 5
+            curl -f http://localhost/health || exit 1
+
+      - <span class="kw">name</span>: <span class="st">Verify deployment</span>
+        <span class="kw">run</span>: |
+          echo "Deployment successful!"
+          echo "Image: ${{ needs.build-and-push.outputs.image-tag }}"</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 — Настройка секретов в GitHub</div>
+                    <p>Перед запуском конвейера необходимо настроить секреты в репозитории. Перейдите в Settings &rarr; Secrets and variables &rarr; Actions и добавьте следующие секреты:</p>
+                    <div class="code-block">
+                        <div class="code-header">Необходимые секреты</div>
+                        <pre><code><span class="kw">SERVER_HOST</span>       <span class="cm"># IP-адрес или домен сервера (например, 203.0.113.10)</span>
+<span class="kw">SERVER_USER</span>       <span class="cm"># Имя пользователя SSH (например, deploy)</span>
+<span class="kw">SSH_PRIVATE_KEY</span>   <span class="cm"># Приватный SSH-ключ для подключения к серверу</span></code></pre>
+                    </div>
+                    <p>Также создайте environment <code>production</code> в Settings &rarr; Environments. Добавьте обязательного рецензента (Required reviewers) — это реализует approval gate перед деплоем в продакшен. При каждом деплое workflow будет ждать одобрения назначенного человека.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 — Запуск и проверка</div>
+                    <p>После коммита и пуша в main, конвейер запустится автоматически. Наблюдайте за выполнением во вкладке Actions вашего репозитория. Каждый job отображается как отдельный блок с логами каждого шага.</p>
+                    <div class="code-block">
+                        <div class="code-header">Запуск конвейера</div>
+                        <pre><code><span class="cm"># Инициализация репозитория и первый пуш</span>
+<span class="fn">git</span> init
+<span class="fn">git</span> add .
+<span class="fn">git</span> commit -m <span class="st">"feat: initial CI/CD pipeline"</span>
+<span class="fn">git</span> remote add origin https://github.com/your-org/myapp.git
+<span class="fn">git</span> push -u origin main
+
+<span class="cm"># Проверка статуса workflow через CLI</span>
+<span class="fn">gh</span> run list --limit 5
+<span class="fn">gh</span> run view --log</code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> вы создали полноценный CI/CD-конвейер, который при каждом пуше в main автоматически линтит код, запускает тесты, собирает Docker-образ, публикует его в GitHub Container Registry и деплоит на сервер. При создании pull request выполняются только lint и тесты — это обеспечивает быструю обратную связь для ревьюера.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Создайте GitHub Actions workflow, который при каждом pull request запускает линтер, unit-тесты и проверяет, что Docker-образ успешно собирается (без публикации). Используйте кеширование <code>node_modules</code> для ускорения.</li>
+                    <li>Настройте matrix strategy для тестирования приложения на Node.js версиях 18, 20 и 22, а также на <code>ubuntu-latest</code> и <code>macos-latest</code>. Убедитесь, что все комбинации проходят успешно.</li>
+                    <li>Создайте <code>.gitlab-ci.yml</code> с четырьмя стадиями (lint, test, build, deploy). В стадии test используйте PostgreSQL как service. Стадия deploy должна быть manual и привязана к environment <code>production</code>.</li>
+                    <li>Реализуйте canary deployment: создайте два Kubernetes Deployment (stable и canary) и Service, который распределяет трафик 90/10 между ними. Напишите скрипт, который постепенно увеличивает долю canary до 100%.</li>
+                    <li>Настройте ArgoCD Application, которая отслеживает Git-репозиторий с Kubernetes-манифестами и автоматически синхронизируется при изменениях. Включите <code>selfHeal</code> и <code>prune</code>. Проверьте, что ручное изменение через <code>kubectl edit</code> откатывается.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://docs.github.com/en/actions" target="_blank">GitHub Actions Documentation</a>
+                        <div class="res-desc">Официальная документация GitHub Actions — подробные руководства по workflow, триггерам, секретам и environments</div>
+                    </li>
+                    <li>
+                        <a href="https://docs.gitlab.com/ee/ci/" target="_blank">GitLab CI/CD Documentation</a>
+                        <div class="res-desc">Полная документация GitLab CI — от основ до продвинутых тем: rules, services, environments, pipelines</div>
+                    </li>
+                    <li>
+                        <a href="https://www.jenkins.io/doc/book/pipeline/" target="_blank">Jenkins Pipeline Documentation</a>
+                        <div class="res-desc">Руководство по Jenkins Pipeline — декларативный и скриптовый синтаксис, shared libraries, best practices</div>
+                    </li>
+                    <li>
+                        <a href="https://argo-cd.readthedocs.io/en/stable/" target="_blank">ArgoCD Documentation</a>
+                        <div class="res-desc">Официальная документация ArgoCD — установка, настройка Applications, GitOps-паттерны</div>
+                    </li>
+                    <li>
+                        <a href="https://martinfowler.com/articles/continuousIntegration.html" target="_blank">Continuous Integration — Martin Fowler</a>
+                        <div class="res-desc">Классическая статья Мартина Фаулера о принципах CI — обязательна к прочтению для понимания философии</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="cicd">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="docker.html" class="nav-title">&larr; Docker</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="ansible.html" class="nav-title">Ansible &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

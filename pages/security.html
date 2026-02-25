@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Безопасность — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Безопасность</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Безопасность (DevSecOps)</h1>
+            <p class="subtitle">Безопасность должна быть встроена в процесс, а не добавлена в конце</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Что такое DevSecOps</h2>
+
+                <p>DevSecOps — это философия и набор практик, которые интегрируют безопасность на каждом этапе жизненного цикла разработки программного обеспечения. Термин образован от слияния Development, Security и Operations, и его ключевая идея выражается принципом <strong>Shift Left</strong> — сдвиг безопасности влево по временной шкале разработки. Вместо того чтобы проверять безопасность продукта в самом конце, перед релизом, DevSecOps предлагает встраивать проверки безопасности с первых строк кода, начиная с этапа проектирования архитектуры. Это принципиально отличается от традиционного подхода, где отдельная команда безопасности проводила аудит уже готового продукта и возвращала разработчикам длинный список уязвимостей, которые нужно было срочно исправлять перед релизом.</p>
+
+                <p>Стоимость исправления дефектов безопасности экспоненциально растёт в зависимости от того, на каком этапе они обнаружены. Уязвимость, найденная на этапе проектирования, обходится практически бесплатно — достаточно изменить спецификацию. На этапе разработки исправление стоит в 6 раз дороже, на этапе тестирования — в 15 раз, а если уязвимость попала в продакшен — стоимость возрастает в 100 раз и более. Это объясняется тем, что в продакшене нужно не только исправить код, но и провести расследование инцидента, уведомить пользователей, подготовить патч, выполнить аварийный деплой, а в случае утечки данных — понести юридическую и репутационную ответственность. Именно поэтому подход «команда безопасности в конце» экономически неэффективен и порождает конфликт между скоростью доставки и безопасностью.</p>
+
+                <p>В DevSecOps безопасность — это ответственность каждого участника команды, а не отдельного подразделения. Разработчики пишут безопасный код и проходят обучение по OWASP. Инженеры DevOps настраивают автоматические проверки безопасности в CI/CD-пайплайнах. Специалисты по безопасности создают политики, инструменты и обучающие материалы, а не выступают в роли «шлагбаума» перед релизом. Такой подход позволяет сохранить высокую скорость доставки, характерную для DevOps-культуры, не жертвуя при этом безопасностью. Автоматизация проверок безопасности становится такой же неотъемлемой частью пайплайна, как юнит-тесты или линтинг кода.</p>
+            </div>
+
+            <!-- ===== ОСНОВНЫЕ ПРИНЦИПЫ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Основные принципы</h2>
+
+                <div class="concept">
+                    <h3>Shift Left</h3>
+                    <p>Принцип Shift Left означает перенос проверок безопасности на максимально ранние этапы разработки. В контексте DevOps это выражается в интеграции инструментов статического анализа (SAST) прямо в IDE разработчика, запуске сканирования зависимостей при каждом коммите и проведении моделирования угроз на этапе проектирования архитектуры. Вместо того чтобы обнаруживать SQL-инъекцию в продакшене через месяц после написания кода, разработчик видит предупреждение в момент написания уязвимой строки.</p>
+                    <p>Практическая реализация Shift Left в DevOps включает: pre-commit хуки, которые проверяют код на наличие секретов перед коммитом; автоматические проверки pull request-ов с помощью SAST-инструментов; обязательное ревью кода с фокусом на безопасность; и тренинги для разработчиков по написанию безопасного кода. Важно, что Shift Left не отменяет проверки на более поздних этапах — оно дополняет их, создавая многоуровневую защиту.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Least Privilege (Принцип минимальных привилегий)</h3>
+                    <p>Каждый пользователь, процесс, сервис или компонент системы должен иметь только те права доступа, которые минимально необходимы для выполнения его функций — и ни одним правом больше. Если микросервис обрабатывает заказы и ему нужен доступ только к таблице <code>orders</code> в базе данных, он не должен иметь привилегий суперпользователя базы данных. Если CI/CD-пайплайн деплоит приложение в определённый namespace Kubernetes, его сервисный аккаунт не должен иметь доступ к другим namespace-ам.</p>
+                    <p>В DevOps этот принцип применяется повсеместно: IAM-роли в облаке создаются с минимальным набором разрешений; Docker-контейнеры запускаются от непривилегированного пользователя; Kubernetes ServiceAccount получает только нужные RBAC-привилегии; SSH-доступ к серверам ограничивается конкретными командами. Нарушение этого принципа — одна из самых частых причин эскалации привилегий при атаках: злоумышленник, получивший доступ к одному компоненту, обнаруживает, что этот компонент имеет права на всю систему.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Defense in Depth (Эшелонированная оборона)</h3>
+                    <p>Принцип эшелонированной обороны предполагает создание множества уровней защиты, каждый из которых способен задержать или остановить атакующего независимо от остальных. Идея в том, что ни один отдельный механизм защиты не является абсолютно надёжным, но их совокупность создаёт систему, взломать которую значительно сложнее. Аналогия из физического мира — средневековый замок с рвом, подъёмным мостом, крепостными стенами, внутренним двором и башней-донжоном.</p>
+                    <p>В DevOps эшелонированная оборона выглядит следующим образом: сетевой уровень защищён файрволами и Network Policies; транспортный уровень использует TLS/mTLS; уровень приложения включает аутентификацию, авторизацию и валидацию входных данных; уровень данных использует шифрование at rest и in transit; уровень инфраструктуры обеспечивается сканированием образов и IaC; а уровень мониторинга включает логирование, аудит и обнаружение аномалий. Если злоумышленник преодолеет один уровень, его остановит следующий.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Zero Trust (Нулевое доверие)</h3>
+                    <p>Модель Zero Trust основана на принципе «никогда не доверяй, всегда проверяй». Традиционная модель безопасности проводила чёткую границу между «внутренней» (доверенной) и «внешней» (недоверенной) сетями. Zero Trust отвергает саму концепцию доверенной сети: каждый запрос должен быть аутентифицирован и авторизован, независимо от того, откуда он пришёл — из интернета или из соседнего микросервиса внутри кластера.</p>
+                    <p>В контексте DevOps и Kubernetes Zero Trust реализуется через mTLS (взаимную аутентификацию) между сервисами с помощью Service Mesh (Istio, Linkerd), Network Policies, которые запрещают все коммуникации по умолчанию и разрешают только явно описанные, а также через систему JWT-токенов и OAuth 2.0 для аутентификации каждого API-запроса. Даже внутри одного кластера Kubernetes сервис A не может обратиться к сервису B без предъявления валидного сертификата и прохождения проверки авторизации.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Principle of Least Astonishment (Принцип наименьшего удивления)</h3>
+                    <p>Система должна вести себя так, как ожидает пользователь. В контексте безопасности это означает, что настройки по умолчанию должны быть безопасными (secure by default), а ослабление безопасности должно требовать явных действий. Например, новый сервис в Kubernetes не должен иметь доступ к интернету по умолчанию — администратор должен явно создать NetworkPolicy, разрешающую исходящий трафик. Новый IAM-пользователь в AWS не должен иметь никаких привилегий — права добавляются явно через политики.</p>
+                    <p>Для DevOps-инженеров этот принцип важен при проектировании пайплайнов и инфраструктуры. Если ваш Terraform-модуль создаёт S3-бакет, он по умолчанию должен быть приватным, с шифрованием и без публичного доступа. Если вашему Helm-чарту требуется привилегированный доступ для работы, это должно быть явно задокументировано, а не скрыто в значениях по умолчанию. Безопасная конфигурация должна быть путём наименьшего сопротивления.</p>
+                </div>
+            </div>
+
+            <!-- ===== БЕЗОПАСНОСТЬ В CI/CD ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Безопасность в CI/CD</h2>
+
+                <p>CI/CD-пайплайн — идеальное место для автоматизации проверок безопасности, поскольку через него проходит весь код, отправляемый в продакшен. Интеграция инструментов безопасности в пайплайн позволяет обнаруживать уязвимости автоматически, без ручного вмешательства, и блокировать небезопасные изменения до их попадания в основную ветку. Существует несколько категорий инструментов, каждая из которых покрывает свой аспект безопасности.</p>
+
+                <div class="concept">
+                    <h3>SAST — Static Application Security Testing</h3>
+                    <p>SAST-инструменты анализируют исходный код приложения без его запуска, выявляя потенциальные уязвимости на основе паттернов и правил. Они способны обнаружить SQL-инъекции, XSS, небезопасное использование криптографии, жёстко закодированные секреты и многие другие проблемы. Популярные инструменты: <strong>SonarQube</strong> — комплексная платформа для анализа качества и безопасности кода, поддерживающая десятки языков; <strong>Semgrep</strong> — лёгкий и быстрый инструмент с декларативными правилами, который легко интегрировать в CI; <strong>Bandit</strong> — специализированный анализатор для Python-кода.</p>
+                    <p>SAST-проверки лучше всего запускать на этапе pull request, чтобы разработчик получил обратную связь ещё до мёрджа. Важно настроить политику: какие уязвимости блокируют мёрдж (критические и высокие), а какие создают только предупреждение (средние и низкие). Это позволяет не замедлять разработку несущественными замечаниями, но гарантировать, что серьёзные уязвимости не попадут в продакшен.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>DAST — Dynamic Application Security Testing</h3>
+                    <p>DAST-инструменты тестируют работающее приложение, отправляя ему специально сформированные запросы и анализируя ответы. В отличие от SAST, они не имеют доступа к исходному коду и работают по принципу «чёрного ящика», что приближает их к действиям реального злоумышленника. <strong>OWASP ZAP (Zed Attack Proxy)</strong> — самый популярный бесплатный DAST-инструмент, способный выполнять как пассивное сканирование (анализ трафика без модификации), так и активное (попытки эксплуатации уязвимостей). <strong>Nuclei</strong> — быстрый сканер с огромной базой шаблонов уязвимостей.</p>
+                    <p>В CI/CD-пайплайне DAST запускается на этапе после деплоя в staging-окружение. Типичный сценарий: приложение деплоится в тестовую среду, затем ZAP выполняет сканирование всех доступных эндпоинтов, и результаты анализируются на наличие критических уязвимостей. DAST требует работающего приложения, поэтому он дополняет, а не заменяет SAST.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>SCA — Software Composition Analysis</h3>
+                    <p>SCA-инструменты анализируют зависимости проекта (библиотеки, пакеты, модули) и проверяют их на наличие известных уязвимостей, используя базы данных CVE (Common Vulnerabilities and Exposures). Современные приложения на 70-90% состоят из зависимостей, поэтому уязвимость в популярной библиотеке может затронуть миллионы проектов (как это произошло с Log4Shell в Apache Log4j). Встроенные инструменты: <strong>npm audit</strong> (Node.js), <strong>pip-audit</strong> (Python), <strong>cargo audit</strong> (Rust). Специализированные платформы: <strong>Snyk</strong>, <strong>Dependabot</strong> (GitHub), <strong>OWASP Dependency-Check</strong>.</p>
+                    <p>SCA лучше всего настроить как автоматическую проверку при каждом pull request и как периодическое сканирование основной ветки (новые CVE появляются ежедневно для уже существующих зависимостей). Dependabot и Snyk могут автоматически создавать pull request-ы с обновлениями уязвимых зависимостей, что значительно ускоряет процесс исправления.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Сканирование контейнерных образов</h3>
+                    <p>Контейнерные образы содержат операционную систему, библиотеки и зависимости, каждая из которых может иметь известные уязвимости. <strong>Trivy</strong> — один из самых популярных и быстрых сканеров образов, разработанный компанией Aqua Security. Он анализирует образ послойно и проверяет каждый пакет по базам CVE. <strong>Grype</strong> от Anchore — ещё один мощный сканер с поддержкой множества форматов SBOM (Software Bill of Materials).</p>
+                    <p>Рекомендуется сканировать образы на нескольких этапах: при сборке в CI (чтобы не допустить уязвимый образ в реестр), периодически в реестре образов (для выявления новых CVE) и при деплое с помощью admission controller в Kubernetes (как последняя линия обороны).</p>
+                </div>
+
+                <div class="concept">
+                    <h3>IaC-сканирование</h3>
+                    <p>Инфраструктура как код (Terraform, CloudFormation, Kubernetes YAML) также требует проверки на безопасность. <strong>tfsec</strong> (теперь часть Trivy) анализирует Terraform-конфигурации и обнаруживает такие проблемы, как открытые Security Groups, незашифрованные S3-бакеты, публичные базы данных. <strong>Checkov</strong> от Bridgecrew проверяет Terraform, Kubernetes, Docker и CloudFormation по сотням встроенных правил. <strong>Kube-linter</strong> анализирует Kubernetes YAML на соответствие лучшим практикам безопасности.</p>
+                    <p>IaC-сканирование предотвращает ситуации, когда инфраструктура создаётся с небезопасной конфигурацией. Например, checkov может обнаружить, что ваш Terraform-код создаёт RDS-инстанс без шифрования или EKS-кластер с публичным API-эндпоинтом, и заблокировать такой pull request ещё до применения изменений.</p>
+                </div>
+
+                <p>Пример CI-шага для сканирования контейнерного образа с помощью Trivy в GitHub Actions:</p>
+
+                <div class="code-block">
+                    <div class="code-header">GitHub Actions — Trivy scan step</div>
+                    <pre><code><span class="kw">name</span>: <span class="st">Build and Scan</span>
+<span class="kw">on</span>: [<span class="st">push</span>, <span class="st">pull_request</span>]
+
+<span class="kw">jobs</span>:
+  <span class="kw">security-scan</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+
+      - <span class="kw">name</span>: <span class="st">Build Docker image</span>
+        <span class="kw">run</span>: <span class="st">docker build -t myapp:${{ github.sha }} .</span>
+
+      - <span class="kw">name</span>: <span class="st">Run Trivy vulnerability scanner</span>
+        <span class="kw">uses</span>: <span class="st">aquasecurity/trivy-action@master</span>
+        <span class="kw">with</span>:
+          <span class="kw">image-ref</span>: <span class="st">'myapp:${{ github.sha }}'</span>
+          <span class="kw">format</span>: <span class="st">'table'</span>
+          <span class="kw">exit-code</span>: <span class="st">'1'</span>               <span class="cm"># Fail pipeline on vulnerabilities</span>
+          <span class="kw">severity</span>: <span class="st">'CRITICAL,HIGH'</span>      <span class="cm"># Only fail on critical/high</span>
+          <span class="kw">ignore-unfixed</span>: <span class="st">true</span>           <span class="cm"># Ignore vulns without a fix</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> параметр <code>exit-code: '1'</code> заставляет Trivy завершиться с ненулевым кодом при обнаружении уязвимостей указанной серьёзности, что приводит к падению пайплайна. Параметр <code>ignore-unfixed: true</code> исключает уязвимости, для которых ещё нет патча, чтобы не блокировать работу на проблемах, которые разработчик не может исправить.
+                </div>
+            </div>
+
+            <!-- ===== УПРАВЛЕНИЕ СЕКРЕТАМИ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Управление секретами</h2>
+
+                <p>Секреты — это пароли, API-ключи, токены доступа, сертификаты TLS, ключи шифрования и любая другая конфиденциальная информация, необходимая для работы приложений и инфраструктуры. Неправильное управление секретами — одна из самых распространённых и опасных ошибок в DevOps. По данным исследований, тысячи секретов ежедневно утекают через публичные GitHub-репозитории, и боты автоматически сканируют каждый коммит в поисках AWS-ключей, токенов базы данных и приватных ключей.</p>
+
+                <p><strong>Никогда не храните секреты в Git-репозитории</strong>, даже в приватном. Даже если вы удалите секрет из файла и сделаете новый коммит, он останется в истории Git и будет доступен через <code>git log</code> и <code>git show</code>. Очистка истории Git (<code>git filter-branch</code> или BFG Repo-Cleaner) — сложная процедура, которая требует force push и переписывает историю для всех участников. Если секрет попал в историю публичного репозитория хотя бы на секунду, считайте его скомпрометированным и немедленно ротируйте.</p>
+
+                <div class="concept">
+                    <h3>Переменные окружения и .env-файлы</h3>
+                    <p>Самый простой способ передать секреты приложению — через переменные окружения. Приложение читает <code>DATABASE_URL</code>, <code>API_KEY</code> и другие значения из окружения, а не из конфигурационных файлов. Для локальной разработки секреты хранятся в файле <code>.env</code>, который <strong>обязательно</strong> добавлен в <code>.gitignore</code>. В CI/CD-системах секреты задаются через настройки пайплайна (GitHub Secrets, GitLab CI Variables) и передаются как переменные окружения во время сборки и деплоя.</p>
+                    <p>Однако переменные окружения имеют ограничения: они доступны всем процессам пользователя, могут попасть в логи при отладке, не поддерживают ротацию и не имеют аудита доступа. Для критичных продакшен-сред необходимо использовать специализированные системы управления секретами.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>HashiCorp Vault</h3>
+                    <p>HashiCorp Vault — это наиболее популярная система управления секретами в DevOps-экосистеме. Vault предоставляет централизованное хранилище с шифрованием, контролем доступа и полным аудитом. Архитектура Vault основана на нескольких ключевых концепциях:</p>
+                    <p><strong>Seal/Unseal</strong> — механизм защиты мастер-ключа. При запуске Vault находится в «запечатанном» (sealed) состоянии и не может обрабатывать запросы. Для распечатывания необходимо предоставить определённое количество ключей (например, 3 из 5 — схема Шамира), каждый из которых хранится у отдельного администратора. <strong>Secrets Engines</strong> — подключаемые модули для различных типов секретов: KV (key-value хранилище), database (динамические учётные данные для БД), PKI (сертификаты), AWS (временные IAM-креденшелы). <strong>Auth Methods</strong> — способы аутентификации клиентов: токены, LDAP, Kubernetes ServiceAccount, AWS IAM, OIDC. Vault может автоматически выдавать временные учётные данные для базы данных, которые истекают через час, что устраняет необходимость в статических паролях.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Другие решения для управления секретами</h3>
+                    <p><strong>AWS Secrets Manager</strong> — полностью управляемый сервис AWS для хранения и автоматической ротации секретов. Интегрируется с RDS, Redshift и другими сервисами AWS для автоматической ротации паролей баз данных. <strong>SOPS (Secrets OPerationS)</strong> — инструмент от Mozilla, который шифрует значения в YAML/JSON файлах, оставляя ключи в открытом виде. Это позволяет хранить зашифрованные секреты прямо в Git, используя для шифрования AWS KMS, GCP KMS или PGP-ключи.</p>
+                    <p><strong>Sealed Secrets</strong> — решение для Kubernetes от Bitnami. Контроллер в кластере расшифровывает SealedSecret-ресурсы в обычные Kubernetes Secret. Зашифрованные SealedSecret можно безопасно хранить в Git, поскольку расшифровать их может только контроллер в вашем кластере. Это решает проблему хранения Kubernetes Secret в GitOps-репозиториях.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Ротация секретов</h3>
+                    <p>Секреты имеют ограниченный срок жизни и должны регулярно заменяться. Ротация снижает ущерб от компрометации: если ключ утёк, но будет заменён через 24 часа, окно для атаки ограничено. Vault может генерировать динамические секреты — временные учётные данные, которые создаются по запросу и автоматически отзываются по истечении TTL. Для статических секретов необходимо настроить процесс автоматической ротации с помощью AWS Secrets Manager, Vault или собственных скриптов.</p>
+                    <p>При ротации важно обеспечить graceful-переход: приложение должно иметь возможность работать как со старым, так и с новым секретом в течение переходного периода. Это достигается через поддержку нескольких версий секрета или через механизм горячей перезагрузки конфигурации без остановки приложения.</p>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">.gitignore — защита секретов от попадания в репозиторий</div>
+                    <pre><code><span class="cm"># Секреты и переменные окружения</span>
+<span class="st">.env</span>
+<span class="st">.env.local</span>
+<span class="st">.env.production</span>
+<span class="st">*.pem</span>
+<span class="st">*.key</span>
+<span class="st">*.p12</span>
+
+<span class="cm"># Terraform state может содержать секреты</span>
+<span class="st">*.tfstate</span>
+<span class="st">*.tfstate.backup</span>
+
+<span class="cm"># Kubernetes secrets</span>
+<span class="st">*-secret.yaml</span>
+<span class="st">secrets/</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== БЕЗОПАСНОСТЬ КОНТЕЙНЕРОВ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Безопасность контейнеров</h2>
+
+                <p>Контейнеры изолируют приложения друг от друга, но эта изоляция не абсолютна. В отличие от виртуальных машин, контейнеры разделяют одно ядро операционной системы с хост-машиной. Уязвимость в ядре или неправильная конфигурация контейнера могут привести к «побегу» из контейнера и получению доступа к хост-системе. Поэтому безопасность контейнеров — критически важная часть DevSecOps.</p>
+
+                <div class="concept">
+                    <h3>Безопасные базовые образы</h3>
+                    <p>Выбор базового образа — первый и самый важный шаг в обеспечении безопасности контейнера. Чем меньше пакетов в образе, тем меньше потенциальных уязвимостей. <strong>Distroless-образы</strong> от Google содержат только приложение и его runtime-зависимости, без пакетного менеджера, shell и утилит. Это делает их минимальными по размеру и максимально безопасными: злоумышленник, получивший доступ к контейнеру, не сможет использовать shell для дальнейших действий. <strong>Alpine Linux</strong> — минималистичный дистрибутив размером около 5 МБ, использующий musl libc и busybox. Он значительно меньше Ubuntu/Debian-образов и содержит гораздо меньше пакетов.</p>
+                    <p>Рекомендуется использовать multi-stage builds: на первом этапе компиляция в полноценном образе с инструментами сборки, на втором — копирование только результата в минимальный runtime-образ. Это позволяет исключить компиляторы, заголовочные файлы и другие инструменты сборки из финального образа.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>Docker-безопасность: лучшие практики</h3>
+                    <p>Запуск контейнера от root-пользователя — одна из самых распространённых ошибок. По умолчанию Docker запускает процессы от root, и если злоумышленник получит доступ к контейнеру, он будет root-ом внутри него. Директива <code>USER</code> в Dockerfile должна указывать непривилегированного пользователя. Файловая система контейнера должна быть доступна только для чтения (<code>--read-only</code>), а для записи необходимо явно монтировать tmpfs-тома. Не устанавливайте ненужные пакеты — каждый дополнительный пакет увеличивает поверхность атаки.</p>
+                    <p>Подпись образов с помощью <strong>cosign</strong> (из проекта Sigstore) позволяет гарантировать, что образ не был модифицирован после сборки. Cosign привязывает криптографическую подпись к конкретному дайджесту образа, и Kubernetes admission controller может проверять эту подпись при деплое, блокируя неподписанные или модифицированные образы.</p>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile — безопасный пример</div>
+                    <pre><code><span class="cm"># Stage 1: сборка</span>
+<span class="kw">FROM</span> <span class="st">node:20-alpine</span> <span class="kw">AS</span> <span class="fn">builder</span>
+<span class="kw">WORKDIR</span> <span class="st">/app</span>
+<span class="kw">COPY</span> package*.json ./
+<span class="kw">RUN</span> npm ci --only=production
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> npm run build
+
+<span class="cm"># Stage 2: минимальный runtime-образ</span>
+<span class="kw">FROM</span> <span class="st">gcr.io/distroless/nodejs20-debian12</span>
+<span class="kw">WORKDIR</span> <span class="st">/app</span>
+
+<span class="cm"># Копируем только результат сборки</span>
+<span class="kw">COPY</span> --from=builder /app/dist ./dist
+<span class="kw">COPY</span> --from=builder /app/node_modules ./node_modules
+
+<span class="cm"># Запуск от непривилегированного пользователя (UID 1000)</span>
+<span class="kw">USER</span> <span class="st">1000</span>
+
+<span class="kw">EXPOSE</span> <span class="st">3000</span>
+<span class="kw">CMD</span> [<span class="st">"dist/server.js"</span>]</code></pre>
+                </div>
+
+                <div class="concept">
+                    <h3>Kubernetes: PodSecurityStandards и SecurityContext</h3>
+                    <p>Kubernetes предоставляет механизмы для ограничения привилегий подов на уровне кластера. <strong>Pod Security Standards</strong> определяют три уровня безопасности: <em>Privileged</em> (без ограничений), <em>Baseline</em> (запрещает наиболее опасные конфигурации) и <em>Restricted</em> (наиболее строгий профиль, требующий запуска от непривилегированного пользователя с минимальными capabilities). Pod Security Admission (PSA) — встроенный в Kubernetes контроллер, который применяет эти стандарты на уровне namespace.</p>
+                    <p><strong>SecurityContext</strong> задаётся на уровне пода или отдельного контейнера и определяет параметры безопасности: <code>runAsNonRoot: true</code> запрещает запуск от root; <code>readOnlyRootFilesystem: true</code> делает файловую систему доступной только для чтения; <code>allowPrivilegeEscalation: false</code> запрещает процессу повышать свои привилегии; а блок <code>capabilities</code> позволяет явно указать, какие Linux capabilities нужны контейнеру (обычно <code>drop: ["ALL"]</code> с добавлением только необходимых).</p>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Kubernetes — SecurityContext для пода</div>
+                    <pre><code><span class="kw">apiVersion</span>: <span class="st">v1</span>
+<span class="kw">kind</span>: <span class="st">Pod</span>
+<span class="kw">metadata</span>:
+  <span class="kw">name</span>: <span class="st">secure-app</span>
+<span class="kw">spec</span>:
+  <span class="kw">securityContext</span>:
+    <span class="kw">runAsNonRoot</span>: <span class="st">true</span>
+    <span class="kw">runAsUser</span>: <span class="st">1000</span>
+    <span class="kw">runAsGroup</span>: <span class="st">1000</span>
+    <span class="kw">fsGroup</span>: <span class="st">1000</span>
+    <span class="kw">seccompProfile</span>:
+      <span class="kw">type</span>: <span class="st">RuntimeDefault</span>
+  <span class="kw">containers</span>:
+    - <span class="kw">name</span>: <span class="st">app</span>
+      <span class="kw">image</span>: <span class="st">myapp:1.0.0</span>
+      <span class="kw">securityContext</span>:
+        <span class="kw">allowPrivilegeEscalation</span>: <span class="st">false</span>
+        <span class="kw">readOnlyRootFilesystem</span>: <span class="st">true</span>
+        <span class="kw">capabilities</span>:
+          <span class="kw">drop</span>:
+            - <span class="st">ALL</span>
+      <span class="kw">volumeMounts</span>:
+        - <span class="kw">name</span>: <span class="st">tmp</span>
+          <span class="kw">mountPath</span>: <span class="st">/tmp</span>
+  <span class="kw">volumes</span>:
+    - <span class="kw">name</span>: <span class="st">tmp</span>
+      <span class="kw">emptyDir</span>: {}</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Обратите внимание:</strong> поскольку <code>readOnlyRootFilesystem: true</code> запрещает запись в файловую систему контейнера, для временных файлов монтируется отдельный <code>emptyDir</code> том в <code>/tmp</code>. Без этого приложения, которым нужна запись временных файлов, не смогут работать.
+                </div>
+            </div>
+
+            <!-- ===== RBAC И УПРАВЛЕНИЕ ДОСТУПОМ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>RBAC и управление доступом</h2>
+
+                <p>Управление доступом — один из краеугольных камней информационной безопасности. Модель <strong>RBAC (Role-Based Access Control)</strong> основана на назначении разрешений не напрямую пользователям, а через промежуточный слой — роли. Роль описывает набор разрешённых действий, а затем назначается одному или нескольким субъектам (пользователям, группам, сервисным аккаунтам). Это значительно упрощает управление доступом в системах с большим количеством пользователей: вместо настройки прав для каждого пользователя индивидуально, администратор создаёт роли («разработчик», «оператор», «администратор»), каждая из которых имеет определённый набор привилегий.</p>
+
+                <div class="concept">
+                    <h3>Kubernetes RBAC</h3>
+                    <p>Kubernetes имеет встроенную систему RBAC, которая контролирует доступ к API-серверу. Она основана на четырёх типах ресурсов: <strong>Role</strong> — определяет набор разрешений в рамках одного namespace (например, «может читать и создавать поды в namespace dev»); <strong>ClusterRole</strong> — то же самое, но на уровне всего кластера (например, «может читать ноды кластера»); <strong>RoleBinding</strong> — привязывает Role к субъекту (пользователю, группе или ServiceAccount) в рамках namespace; <strong>ClusterRoleBinding</strong> — привязывает ClusterRole к субъекту на уровне всего кластера.</p>
+                    <p><strong>ServiceAccount</strong> — специальный тип учётной записи для подов и процессов внутри кластера. Каждый namespace имеет ServiceAccount по умолчанию, который автоматически привязывается ко всем подам в этом namespace. Однако этот аккаунт не должен иметь лишних привилегий. Лучшая практика — создавать отдельный ServiceAccount для каждого приложения и назначать ему только необходимые права через RoleBinding.</p>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Kubernetes RBAC — Role и RoleBinding</div>
+                    <pre><code><span class="cm"># Role: разрешает чтение подов и логов в namespace "production"</span>
+<span class="kw">apiVersion</span>: <span class="st">rbac.authorization.k8s.io/v1</span>
+<span class="kw">kind</span>: <span class="st">Role</span>
+<span class="kw">metadata</span>:
+  <span class="kw">namespace</span>: <span class="st">production</span>
+  <span class="kw">name</span>: <span class="st">pod-reader</span>
+<span class="kw">rules</span>:
+  - <span class="kw">apiGroups</span>: [<span class="st">""</span>]
+    <span class="kw">resources</span>: [<span class="st">"pods"</span>, <span class="st">"pods/log"</span>]
+    <span class="kw">verbs</span>: [<span class="st">"get"</span>, <span class="st">"list"</span>, <span class="st">"watch"</span>]
+<span class="fl">---</span>
+<span class="cm"># RoleBinding: привязывает роль к ServiceAccount приложения</span>
+<span class="kw">apiVersion</span>: <span class="st">rbac.authorization.k8s.io/v1</span>
+<span class="kw">kind</span>: <span class="st">RoleBinding</span>
+<span class="kw">metadata</span>:
+  <span class="kw">namespace</span>: <span class="st">production</span>
+  <span class="kw">name</span>: <span class="st">read-pods-binding</span>
+<span class="kw">subjects</span>:
+  - <span class="kw">kind</span>: <span class="st">ServiceAccount</span>
+    <span class="kw">name</span>: <span class="st">monitoring-sa</span>
+    <span class="kw">namespace</span>: <span class="st">production</span>
+<span class="kw">roleRef</span>:
+  <span class="kw">kind</span>: <span class="st">Role</span>
+  <span class="kw">name</span>: <span class="st">pod-reader</span>
+  <span class="kw">apiGroup</span>: <span class="st">rbac.authorization.k8s.io</span></code></pre>
+                </div>
+
+                <div class="concept">
+                    <h3>AWS IAM</h3>
+                    <p>AWS Identity and Access Management (IAM) — это система управления доступом к ресурсам AWS. IAM-политики описывают разрешения в формате JSON и определяют, кто (Principal) может выполнять какие действия (Action) над какими ресурсами (Resource) при каких условиях (Condition). Политики могут быть привязаны к пользователям, группам или ролям. <strong>IAM-роли</strong> особенно важны для DevOps: вместо использования долгосрочных access-ключей, EC2-инстансы, Lambda-функции и EKS-поды получают временные учётные данные через привязанную IAM-роль.</p>
+                    <p>Принцип минимальных привилегий в IAM реализуется через тщательное определение Actions и Resources в политиках. Вместо <code>"Action": "s3:*"</code> указывайте конкретные операции: <code>"Action": ["s3:GetObject", "s3:PutObject"]</code>. Вместо <code>"Resource": "*"</code> указывайте ARN конкретного бакета: <code>"Resource": "arn:aws:s3:::my-bucket/*"</code>. AWS IAM Access Analyzer помогает обнаруживать избыточные разрешения и ресурсы, доступные извне вашего аккаунта.</p>
+                </div>
+            </div>
+
+            <!-- ===== СЕТЕВАЯ БЕЗОПАСНОСТЬ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Сетевая безопасность</h2>
+
+                <p>Сетевая безопасность контролирует, какие компоненты системы могут взаимодействовать друг с другом на сетевом уровне. По умолчанию в большинстве сред все компоненты могут общаться со всеми — это удобно для разработки, но создаёт огромные риски в продакшене. Компрометация одного сервиса позволяет злоумышленнику свободно перемещаться по сети и атаковать другие сервисы (lateral movement). Правильная сетевая безопасность ограничивает этот «радиус поражения».</p>
+
+                <div class="concept">
+                    <h3>Network Policies в Kubernetes</h3>
+                    <p>Kubernetes Network Policies — это ресурсы, которые контролируют сетевой трафик между подами на уровне IP-адресов и портов. По умолчанию в Kubernetes все поды могут общаться со всеми. Network Policy позволяет определить правила: какие поды могут принимать входящий трафик (ingress) и куда могут отправлять исходящий (egress). Политики работают по принципу «белого списка»: если к поду применена хотя бы одна Network Policy, весь трафик, не разрешённый явно, блокируется.</p>
+                    <p>Рекомендуемый подход — начать с политики «запретить всё» (default deny) для каждого namespace, а затем добавлять разрешающие правила только для необходимых коммуникаций. Это соответствует принципу Zero Trust на сетевом уровне. Важно помнить, что Network Policies реализуются CNI-плагином (Calico, Cilium, Weave Net), и не все плагины поддерживают все возможности (например, egress-политики).</p>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Kubernetes — Default Deny + разрешение конкретного трафика</div>
+                    <pre><code><span class="cm"># Запретить весь входящий трафик в namespace</span>
+<span class="kw">apiVersion</span>: <span class="st">networking.k8s.io/v1</span>
+<span class="kw">kind</span>: <span class="st">NetworkPolicy</span>
+<span class="kw">metadata</span>:
+  <span class="kw">name</span>: <span class="st">default-deny-ingress</span>
+  <span class="kw">namespace</span>: <span class="st">production</span>
+<span class="kw">spec</span>:
+  <span class="kw">podSelector</span>: {}        <span class="cm"># Применяется ко всем подам</span>
+  <span class="kw">policyTypes</span>:
+    - <span class="st">Ingress</span>
+<span class="fl">---</span>
+<span class="cm"># Разрешить трафик от фронтенда к API</span>
+<span class="kw">apiVersion</span>: <span class="st">networking.k8s.io/v1</span>
+<span class="kw">kind</span>: <span class="st">NetworkPolicy</span>
+<span class="kw">metadata</span>:
+  <span class="kw">name</span>: <span class="st">allow-frontend-to-api</span>
+  <span class="kw">namespace</span>: <span class="st">production</span>
+<span class="kw">spec</span>:
+  <span class="kw">podSelector</span>:
+    <span class="kw">matchLabels</span>:
+      <span class="kw">app</span>: <span class="st">api</span>
+  <span class="kw">ingress</span>:
+    - <span class="kw">from</span>:
+        - <span class="kw">podSelector</span>:
+            <span class="kw">matchLabels</span>:
+              <span class="kw">app</span>: <span class="st">frontend</span>
+      <span class="kw">ports</span>:
+        - <span class="kw">protocol</span>: <span class="st">TCP</span>
+          <span class="kw">port</span>: <span class="st">8080</span></code></pre>
+                </div>
+
+                <div class="concept">
+                    <h3>Service Mesh и mTLS</h3>
+                    <p><strong>Service Mesh</strong> — это инфраструктурный слой, который управляет межсервисным взаимодействием. <strong>Istio</strong> — самый популярный Service Mesh для Kubernetes — внедряет sidecar-прокси (Envoy) рядом с каждым подом, который перехватывает весь сетевой трафик. Одна из ключевых возможностей Istio — автоматический <strong>mTLS (mutual TLS)</strong> между всеми сервисами. В отличие от обычного TLS, где только клиент проверяет сертификат сервера, mTLS требует взаимной аутентификации: оба участника предъявляют сертификаты и проверяют друг друга.</p>
+                    <p>Istio автоматически генерирует, распространяет и ротирует сертификаты для всех подов в mesh, делая шифрование трафика между сервисами полностью прозрачным для разработчиков. Приложению не нужно знать о TLS — Envoy-прокси берёт шифрование на себя. Это реализует принцип Zero Trust на транспортном уровне: даже если злоумышленник получит доступ к сети кластера, он не сможет прочитать или модифицировать трафик между сервисами.</p>
+                </div>
+
+                <div class="concept">
+                    <h3>WAF и защита от DDoS</h3>
+                    <p><strong>WAF (Web Application Firewall)</strong> — это межсетевой экран уровня приложений, который анализирует HTTP-запросы и блокирует подозрительные на основе правил. WAF защищает от SQL-инъекций, XSS, CSRF и других атак уровня приложения, которые не видны обычным сетевым файрволам. Популярные решения: AWS WAF, Cloudflare WAF, ModSecurity (open source). WAF размещается перед приложением и фильтрует входящий трафик, пропуская только легитимные запросы.</p>
+                    <p><strong>DDoS-защита</strong> (Distributed Denial of Service) необходима для защиты от атак, направленных на исчерпание ресурсов сервиса. Объёмные DDoS-атаки генерируют терабиты трафика, и справиться с ними можно только на уровне провайдера или CDN. Cloudflare, AWS Shield, Google Cloud Armor автоматически обнаруживают и фильтруют DDoS-трафик. На уровне приложения защитой служит rate limiting — ограничение количества запросов от одного клиента за единицу времени.</p>
+                </div>
+            </div>
+
+            <!-- ===== OWASP TOP 10 ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>OWASP Top 10</h2>
+
+                <p>OWASP (Open Web Application Security Project) — это некоммерческая организация, которая создаёт бесплатные инструменты, документацию и стандарты для обеспечения безопасности веб-приложений. <strong>OWASP Top 10</strong> — их флагманский проект, представляющий собой список десяти наиболее критичных категорий уязвимостей веб-приложений. Этот список обновляется раз в несколько лет на основе анализа реальных данных об уязвимостях и является де-факто стандартом для обучения веб-безопасности и аудита приложений.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Описание</th>
+                                <th>Меры защиты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>A01: Broken Access Control</strong></td>
+                                <td>Нарушение контроля доступа — пользователь может выполнять действия или просматривать данные, к которым у него нет прав. Например, изменение ID в URL для доступа к чужим данным (IDOR).</td>
+                                <td>Проверка авторизации на сервере для каждого запроса; принцип deny by default; запрет листинга директорий; ограничение CORS.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A02: Cryptographic Failures</strong></td>
+                                <td>Криптографические ошибки — использование слабых алгоритмов, хранение паролей в открытом виде, передача данных без шифрования, использование жёстко закодированных ключей.</td>
+                                <td>TLS для всех данных в транзите; bcrypt/scrypt/argon2 для хешей паролей; AES-256 для шифрования данных; отказ от MD5/SHA1.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A03: Injection</strong></td>
+                                <td>Инъекции — внедрение вредоносного кода через пользовательский ввод: SQL-инъекции, OS Command Injection, LDAP Injection, NoSQL Injection.</td>
+                                <td>Параметризованные запросы (prepared statements); ORM; валидация и санитизация ввода; экранирование специальных символов.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A04: Insecure Design</strong></td>
+                                <td>Небезопасный дизайн — архитектурные ошибки, которые невозможно исправить идеальной реализацией. Например, отсутствие rate limiting для восстановления пароля.</td>
+                                <td>Моделирование угроз (Threat Modeling); secure design patterns; use-case и misuse-case анализ на этапе проектирования.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A05: Security Misconfiguration</strong></td>
+                                <td>Небезопасная конфигурация — настройки по умолчанию, открытые порты, подробные сообщения об ошибках, неиспользуемые функции, стандартные учётные данные.</td>
+                                <td>Hardening-процесс; автоматизация конфигурации через IaC; удаление неиспользуемых компонентов; отключение отладочных режимов.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A06: Vulnerable Components</strong></td>
+                                <td>Использование компонентов с известными уязвимостями — устаревшие библиотеки, фреймворки, OS-пакеты с опубликованными CVE.</td>
+                                <td>SCA-инструменты (Snyk, Dependabot); регулярное обновление зависимостей; мониторинг CVE; SBOM (Software Bill of Materials).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A07: Authentication Failures</strong></td>
+                                <td>Ошибки аутентификации — слабые пароли, отсутствие защиты от brute force, некорректное управление сессиями, отсутствие MFA.</td>
+                                <td>MFA (многофакторная аутентификация); rate limiting; безопасные сессии; политика сложности паролей; защита от credential stuffing.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A08: Software and Data Integrity Failures</strong></td>
+                                <td>Нарушения целостности ПО и данных — использование непроверенных библиотек, отсутствие проверки целостности обновлений, небезопасный CI/CD-пайплайн.</td>
+                                <td>Проверка подписей пакетов; использование lock-файлов; подпись образов (cosign); защита CI/CD от несанкционированных изменений.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A09: Security Logging and Monitoring Failures</strong></td>
+                                <td>Недостаточное логирование и мониторинг — отсутствие логов аутентификации, неспособность обнаружить атаку, отсутствие алертов на подозрительную активность.</td>
+                                <td>Централизованное логирование; логирование всех событий безопасности; SIEM-системы; настройка алертов на аномалии; план реагирования на инциденты.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>A10: Server-Side Request Forgery (SSRF)</strong></td>
+                                <td>Подделка запросов на стороне сервера — приложение делает HTTP-запросы по URL, предоставленному пользователем, позволяя атаковать внутренние сервисы.</td>
+                                <td>Валидация и белый список URL; сетевая сегментация; запрет доступа к метаданным облака (169.254.169.254); отключение HTTP-редиректов.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="note">
+                    <strong>Совет:</strong> знание OWASP Top 10 является обязательным для каждого DevOps-инженера и разработчика. Многие организации используют этот список как базу для аудита безопасности и определения требований к защите. Рекомендуется пройти по каждой категории и проверить, какие из этих уязвимостей могут существовать в ваших проектах.
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы настроим безопасный CI-пайплайн, который автоматически проверяет код, контейнеры и конфигурации на наличие уязвимостей. Мы интегрируем четыре инструмента: Trivy для сканирования контейнерных образов, gitleaks для обнаружения секретов в коде, hadolint для проверки Dockerfile и базовую настройку HashiCorp Vault для управления секретами.</p>
+
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h3>Установка и настройка Trivy</h3>
+                    <p>Trivy — универсальный сканер безопасности, который проверяет контейнерные образы, файловые системы и IaC-конфигурации на наличие уязвимостей. Установим его и выполним первое сканирование.</p>
+                    <div class="code-block">
+                        <div class="code-header">Bash — установка и запуск Trivy</div>
+                        <pre><code><span class="cm"># Установка Trivy (Ubuntu/Debian)</span>
+<span class="fn">sudo</span> apt-get install -y wget apt-transport-https gnupg lsb-release
+<span class="fn">wget</span> -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
+  <span class="fn">sudo</span> apt-key add -
+<span class="fn">echo</span> <span class="st">"deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main"</span> | \
+  <span class="fn">sudo</span> tee /etc/apt/sources.list.d/trivy.list
+<span class="fn">sudo</span> apt-get update && <span class="fn">sudo</span> apt-get install -y trivy
+
+<span class="cm"># Сканирование Docker-образа</span>
+<span class="fn">trivy</span> image --severity HIGH,CRITICAL python:3.11-slim
+
+<span class="cm"># Сканирование файловой системы проекта (IaC + зависимости)</span>
+<span class="fn">trivy</span> fs --security-checks vuln,secret,config .
+
+<span class="cm"># Сканирование с выводом в JSON (для CI/CD)</span>
+<span class="fn">trivy</span> image --format json --output results.json myapp:latest</code></pre>
+                    </div>
+                    <p>Trivy автоматически скачивает базу CVE при первом запуске. Параметр <code>--severity</code> позволяет фильтровать результаты по критичности. В CI рекомендуется использовать <code>--exit-code 1</code>, чтобы пайплайн падал при обнаружении уязвимостей.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h3>Обнаружение секретов с помощью gitleaks</h3>
+                    <p>Gitleaks — инструмент для обнаружения жёстко закодированных секретов (API-ключей, паролей, токенов) в Git-репозиториях. Он сканирует историю коммитов и текущие файлы, используя набор регулярных выражений для распознавания различных типов секретов.</p>
+                    <div class="code-block">
+                        <div class="code-header">Bash — установка и использование gitleaks</div>
+                        <pre><code><span class="cm"># Установка gitleaks</span>
+<span class="fn">brew</span> install gitleaks          <span class="cm"># macOS</span>
+<span class="cm"># или скачать бинарный файл с GitHub releases</span>
+
+<span class="cm"># Сканирование текущего репозитория (все коммиты)</span>
+<span class="fn">gitleaks</span> detect --source . --verbose
+
+<span class="cm"># Сканирование только staged изменений (pre-commit)</span>
+<span class="fn">gitleaks</span> protect --staged --verbose
+
+<span class="cm"># Создание pre-commit хука</span>
+<span class="cm"># Добавьте в .pre-commit-config.yaml:</span>
+<span class="cm"># repos:</span>
+<span class="cm">#   - repo: https://github.com/gitleaks/gitleaks</span>
+<span class="cm">#     rev: v8.18.0</span>
+<span class="cm">#     hooks:</span>
+<span class="cm">#       - id: gitleaks</span>
+
+<span class="cm"># GitHub Actions step</span>
+<span class="cm"># - name: Run gitleaks</span>
+<span class="cm">#   uses: gitleaks/gitleaks-action@v2</span>
+<span class="cm">#   env:</span>
+<span class="cm">#     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}</span></code></pre>
+                    </div>
+                    <p>Gitleaks поддерживает кастомные правила через конфигурационный файл <code>.gitleaks.toml</code>, где можно определить собственные паттерны для обнаружения или исключить ложные срабатывания. Настройка pre-commit хука гарантирует, что секреты не попадут в репозиторий даже случайно.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h3>Линтинг Dockerfile с hadolint</h3>
+                    <p>Hadolint — инструмент для проверки Dockerfile на соответствие лучшим практикам. Он обнаруживает небезопасные инструкции, неоптимальные слои, использование тега <code>latest</code> и другие проблемы.</p>
+                    <div class="code-block">
+                        <div class="code-header">Bash — установка и использование hadolint</div>
+                        <pre><code><span class="cm"># Установка hadolint</span>
+<span class="fn">brew</span> install hadolint          <span class="cm"># macOS</span>
+<span class="cm"># или через Docker:</span>
+<span class="fn">docker</span> run --rm -i hadolint/hadolint < Dockerfile
+
+<span class="cm"># Проверка Dockerfile</span>
+<span class="fn">hadolint</span> Dockerfile
+
+<span class="cm"># Пример вывода:</span>
+<span class="cm"># Dockerfile:3 DL3007 warning: Using latest is prone to errors</span>
+<span class="cm"># Dockerfile:5 DL3008 warning: Pin versions in apt-get install</span>
+<span class="cm"># Dockerfile:8 DL3002 warning: Last USER should not be root</span>
+
+<span class="cm"># Игнорирование конкретных правил</span>
+<span class="fn">hadolint</span> --ignore DL3008 Dockerfile
+
+<span class="cm"># GitHub Actions step</span>
+<span class="cm"># - name: Lint Dockerfile</span>
+<span class="cm">#   uses: hadolint/hadolint-action@v3.1.0</span>
+<span class="cm">#   with:</span>
+<span class="cm">#     dockerfile: Dockerfile</span></code></pre>
+                    </div>
+                    <p>Hadolint помогает обеспечить безопасность контейнеров ещё на этапе написания Dockerfile: предупреждает о запуске от root, о использовании непинированных версий пакетов и образов, об отсутствии health check и других потенциальных проблемах.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <h3>Базовая настройка HashiCorp Vault</h3>
+                    <p>Настроим Vault в режиме разработки для локального тестирования, создадим секреты и научимся их читать. В продакшене Vault запускается в кластерном режиме с бэкендом хранения (Consul, Raft) и механизмом unseal.</p>
+                    <div class="code-block">
+                        <div class="code-header">Bash — установка и базовая настройка Vault</div>
+                        <pre><code><span class="cm"># Установка Vault</span>
+<span class="fn">brew</span> install vault              <span class="cm"># macOS</span>
+<span class="cm"># или скачать с https://www.vaultproject.io/downloads</span>
+
+<span class="cm"># Запуск Vault в dev-режиме (только для тестирования!)</span>
+<span class="fn">vault</span> server -dev -dev-root-token-id=<span class="st">"myroot"</span>
+
+<span class="cm"># В другом терминале: настройка клиента</span>
+<span class="kw">export</span> <span class="fn">VAULT_ADDR</span>=<span class="st">'http://127.0.0.1:8200'</span>
+<span class="kw">export</span> <span class="fn">VAULT_TOKEN</span>=<span class="st">'myroot'</span>
+
+<span class="cm"># Проверка статуса</span>
+<span class="fn">vault</span> status
+
+<span class="cm"># Запись секрета в KV-хранилище</span>
+<span class="fn">vault</span> kv put secret/myapp/config \
+  db_host=<span class="st">"postgres.prod.internal"</span> \
+  db_user=<span class="st">"app_user"</span> \
+  db_password=<span class="st">"s3cur3P@ssw0rd"</span>
+
+<span class="cm"># Чтение секрета</span>
+<span class="fn">vault</span> kv get secret/myapp/config
+
+<span class="cm"># Чтение конкретного поля</span>
+<span class="fn">vault</span> kv get -field=db_password secret/myapp/config
+
+<span class="cm"># Создание политики доступа</span>
+<span class="fn">vault</span> policy write myapp-policy - <span class="st">&lt;&lt;EOF
+path "secret/data/myapp/*" {
+  capabilities = ["read", "list"]
+}
+EOF</span>
+
+<span class="cm"># Создание токена с ограниченной политикой</span>
+<span class="fn">vault</span> token create -policy=<span class="st">"myapp-policy"</span> -ttl=<span class="st">"1h"</span></code></pre>
+                    </div>
+                    <p>В продакшене вместо dev-режима используется полноценная инициализация с <code>vault operator init</code> (генерация unseal-ключей) и <code>vault operator unseal</code> (распечатывание). Для Kubernetes интеграция осуществляется через <strong>Vault Agent Injector</strong>, который автоматически монтирует секреты в поды в виде файлов, или через CSI-драйвер, который представляет секреты как Kubernetes-тома.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <h3>Собираем всё в CI-пайплайн</h3>
+                    <p>Объединим все инструменты в единый GitHub Actions пайплайн, который выполняет комплексную проверку безопасности при каждом pull request.</p>
+                    <div class="code-block">
+                        <div class="code-header">GitHub Actions — полный security pipeline</div>
+                        <pre><code><span class="kw">name</span>: <span class="st">Security Pipeline</span>
+<span class="kw">on</span>:
+  <span class="kw">pull_request</span>:
+    <span class="kw">branches</span>: [<span class="st">main</span>]
+  <span class="kw">push</span>:
+    <span class="kw">branches</span>: [<span class="st">main</span>]
+
+<span class="kw">jobs</span>:
+  <span class="kw">secret-scan</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+        <span class="kw">with</span>:
+          <span class="kw">fetch-depth</span>: <span class="st">0</span>       <span class="cm"># Full history for gitleaks</span>
+      - <span class="kw">name</span>: <span class="st">Detect secrets with gitleaks</span>
+        <span class="kw">uses</span>: <span class="st">gitleaks/gitleaks-action@v2</span>
+        <span class="kw">env</span>:
+          <span class="kw">GITHUB_TOKEN</span>: <span class="st">${{ secrets.GITHUB_TOKEN }}</span>
+
+  <span class="kw">lint-dockerfile</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+      - <span class="kw">name</span>: <span class="st">Lint Dockerfile</span>
+        <span class="kw">uses</span>: <span class="st">hadolint/hadolint-action@v3.1.0</span>
+        <span class="kw">with</span>:
+          <span class="kw">dockerfile</span>: <span class="st">Dockerfile</span>
+
+  <span class="kw">image-scan</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">needs</span>: [<span class="st">lint-dockerfile</span>]
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+      - <span class="kw">name</span>: <span class="st">Build Docker image</span>
+        <span class="kw">run</span>: <span class="st">docker build -t myapp:${{ github.sha }} .</span>
+      - <span class="kw">name</span>: <span class="st">Scan image with Trivy</span>
+        <span class="kw">uses</span>: <span class="st">aquasecurity/trivy-action@master</span>
+        <span class="kw">with</span>:
+          <span class="kw">image-ref</span>: <span class="st">'myapp:${{ github.sha }}'</span>
+          <span class="kw">format</span>: <span class="st">'table'</span>
+          <span class="kw">exit-code</span>: <span class="st">'1'</span>
+          <span class="kw">severity</span>: <span class="st">'CRITICAL,HIGH'</span>
+          <span class="kw">ignore-unfixed</span>: <span class="st">true</span>
+
+  <span class="kw">iac-scan</span>:
+    <span class="kw">runs-on</span>: <span class="st">ubuntu-latest</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: <span class="st">actions/checkout@v4</span>
+      - <span class="kw">name</span>: <span class="st">Scan IaC with Trivy</span>
+        <span class="kw">uses</span>: <span class="st">aquasecurity/trivy-action@master</span>
+        <span class="kw">with</span>:
+          <span class="kw">scan-type</span>: <span class="st">'config'</span>
+          <span class="kw">scan-ref</span>: <span class="st">'.'</span>
+          <span class="kw">exit-code</span>: <span class="st">'1'</span>
+          <span class="kw">severity</span>: <span class="st">'CRITICAL,HIGH'</span></code></pre>
+                    </div>
+                    <p>Этот пайплайн выполняет четыре параллельных проверки: обнаружение секретов в истории коммитов, линтинг Dockerfile, сканирование контейнерного образа на уязвимости и сканирование IaC-конфигураций. Шаг <code>image-scan</code> зависит от <code>lint-dockerfile</code>, чтобы не тратить время на сборку образа с некорректным Dockerfile.</p>
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Задания для самостоятельной работы</h3>
+                <ol>
+                    <li>Установите Trivy и просканируйте образ <code>nginx:latest</code>. Найдите все уязвимости уровня CRITICAL и HIGH. Затем просканируйте <code>nginx:alpine</code> и сравните результаты — определите, какой образ безопаснее и почему.</li>
+                    <li>Создайте Dockerfile для Node.js-приложения, следуя всем лучшим практикам безопасности: multi-stage build, distroless или alpine в качестве финального образа, непривилегированный пользователь, read-only файловая система. Проверьте его с помощью hadolint — добейтесь отсутствия предупреждений.</li>
+                    <li>Настройте HashiCorp Vault в dev-режиме, создайте KV-секреты для приложения (database URL, API key, JWT secret), создайте политику доступа, которая разрешает только чтение, и создайте токен с этой политикой. Проверьте, что токен не может записывать или удалять секреты.</li>
+                    <li>Напишите Kubernetes-манифест Deployment с максимально строгим SecurityContext: <code>runAsNonRoot</code>, <code>readOnlyRootFilesystem</code>, <code>allowPrivilegeEscalation: false</code>, <code>capabilities: drop ALL</code>. Добавьте NetworkPolicy, запрещающую весь входящий трафик, кроме порта 8080 от подов с меткой <code>role: frontend</code>.</li>
+                    <li>Настройте GitHub Actions пайплайн (или аналогичный CI), который при каждом pull request выполняет: gitleaks для обнаружения секретов, hadolint для Dockerfile, Trivy для сканирования образа, и npm audit (или pip-audit) для зависимостей. Пайплайн должен блокировать мёрдж при обнаружении проблем уровня HIGH и выше.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://owasp.org/www-project-top-ten/" target="_blank">OWASP Top 10</a>
+                        <div class="res-desc">Официальный список десяти наиболее критичных уязвимостей веб-приложений с детальным описанием и рекомендациями по защите</div>
+                    </li>
+                    <li>
+                        <a href="https://developer.hashicorp.com/vault/tutorials" target="_blank">HashiCorp Vault Tutorials</a>
+                        <div class="res-desc">Официальные пошаговые руководства по Vault — от начальной настройки до продвинутых сценариев с динамическими секретами и интеграцией с Kubernetes</div>
+                    </li>
+                    <li>
+                        <a href="https://aquasecurity.github.io/trivy/" target="_blank">Trivy Documentation</a>
+                        <div class="res-desc">Официальная документация Trivy — универсального сканера уязвимостей для контейнеров, файловых систем и IaC</div>
+                    </li>
+                    <li>
+                        <a href="https://cheatsheetseries.owasp.org/" target="_blank">OWASP Cheat Sheet Series</a>
+                        <div class="res-desc">Коллекция кратких практических руководств по безопасности: аутентификация, управление сессиями, криптография и десятки других тем</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="security">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="monitoring.html" class="nav-title">&larr; Мониторинг</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">На главную</div>
+                    <a href="../index.html" class="nav-title">Roadmap &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

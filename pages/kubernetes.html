@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Kubernetes</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Kubernetes</h1>
+            <p class="subtitle">Платформа оркестрации контейнеров &mdash; стандарт индустрии для автоматизации развёртывания, масштабирования и управления контейнеризированными приложениями в продакшене.</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Введение</h2>
+
+                <p>Kubernetes (часто сокращается до K8s, где 8 &mdash; количество букв между «K» и «s») &mdash; это платформа оркестрации контейнеров с открытым исходным кодом, предназначенная для автоматизации развёртывания, масштабирования и управления контейнеризированными приложениями. Когда у вас один-два контейнера на одном сервере, Docker Compose вполне справляется с задачей. Но когда приложение состоит из десятков микросервисов, каждый из которых должен работать в нескольких экземплярах на множестве серверов &mdash; необходима система, которая автоматически распределит нагрузку, перезапустит упавшие контейнеры, обеспечит service discovery и позволит выполнять обновления без простоя. Именно эти задачи решает Kubernetes.</p>
+
+                <p>Kubernetes зародился внутри Google как проект, вдохновлённый внутренней системой управления кластерами Borg, которая десятилетиями управляла миллиардами контейнеров в инфраструктуре Google. В 2014 году Google выпустил Kubernetes как проект с открытым исходным кодом, а в 2015 году передал его в Cloud Native Computing Foundation (CNCF). С тех пор Kubernetes стал де-факто стандартом оркестрации контейнеров: его поддерживают все крупные облачные провайдеры (AWS EKS, Google GKE, Azure AKS), а экосистема инструментов вокруг него насчитывает сотни проектов &mdash; от мониторинга (Prometheus) до service mesh (Istio).</p>
+
+                <p>Помимо Kubernetes существуют и другие оркестраторы. <strong>Docker Swarm</strong> &mdash; встроенный в Docker оркестратор, значительно проще в настройке, но ограничен в функциональности: нет поддержки сложных стратегий обновления, слабый механизм service discovery, минимальная экосистема. <strong>HashiCorp Nomad</strong> &mdash; оркестратор общего назначения, поддерживающий не только контейнеры, но и виртуальные машины и обычные процессы; он проще Kubernetes, но уступает ему по размеру экосистемы и набору встроенных функций. В подавляющем большинстве случаев для продакшена выбирают Kubernetes благодаря его зрелости, универсальности и огромному сообществу.</p>
+            </div>
+
+            <!-- ===== АРХИТЕКТУРА КЛАСТЕРА ===== -->
+            <div class="section">
+                <div class="section-label">Архитектура</div>
+                <h2>Архитектура кластера</h2>
+
+                <p>Кластер Kubernetes состоит из двух типов узлов: <strong>Control Plane</strong> (управляющая плоскость) и <strong>Worker Nodes</strong> (рабочие узлы). Control Plane принимает решения о том, где и как запускать контейнеры, следит за состоянием кластера и реагирует на изменения. Worker Nodes &mdash; это машины, на которых фактически работают контейнеры с приложениями. Такое разделение обеспечивает отказоустойчивость: даже если один или несколько рабочих узлов выйдут из строя, управляющая плоскость обнаружит это и перераспределит нагрузку на оставшиеся узлы.</p>
+
+                <p>В продакшене Control Plane обычно разворачивается на нескольких машинах (минимум три) для обеспечения высокой доступности. Если управляющая плоскость станет недоступной, существующие контейнеры продолжат работать, но новые развёртывания и масштабирование будут невозможны. Рабочие узлы могут добавляться и удаляться динамически в зависимости от нагрузки, что особенно удобно в облачных окружениях с поддержкой автомасштабирования (Cluster Autoscaler).</p>
+
+                <h3>Компоненты Control Plane</h3>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>API Server (kube-apiserver)</h3>
+                        <p>Центральный компонент Kubernetes &mdash; единственная точка входа для всех операций с кластером. Все команды <code>kubectl</code>, запросы от контроллеров и kubelet проходят через API Server. Он принимает REST-запросы, валидирует их, сохраняет состояние в etcd и уведомляет остальные компоненты об изменениях. API Server является stateless-компонентом и может масштабироваться горизонтально &mdash; за балансировщиком нагрузки можно запустить несколько экземпляров.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>etcd</h3>
+                        <p>Распределённое хранилище ключ-значение, в котором хранится всё состояние кластера: информация о подах, сервисах, конфигурациях, секретах и многом другом. etcd использует алгоритм консенсуса Raft для обеспечения согласованности данных между несколькими экземплярами. Потеря данных etcd фактически означает потерю всего кластера, поэтому регулярное резервное копирование etcd &mdash; критически важная операционная задача. Рекомендуется использовать нечётное количество экземпляров (3 или 5) для обеспечения кворума.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Scheduler (kube-scheduler)</h3>
+                        <p>Планировщик, который определяет, на каком рабочем узле будет запущен новый под. Scheduler учитывает множество факторов: доступные ресурсы (CPU, память), affinity/anti-affinity правила, taints и tolerations, ограничения по topology (зона доступности, регион). Например, если под запрашивает 2 CPU и 4 ГБ памяти, Scheduler найдёт узел с достаточным количеством свободных ресурсов и назначит под на него.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Controller Manager (kube-controller-manager)</h3>
+                        <p>Набор контроллеров, которые отслеживают состояние кластера и приводят его к желаемому. Каждый контроллер отвечает за свой тип ресурса: ReplicaSet Controller следит за количеством реплик, Node Controller &mdash; за состоянием узлов, Endpoint Controller &mdash; за связью сервисов с подами. Если вы задали 3 реплики приложения, а одна упала, именно ReplicaSet Controller обнаружит расхождение и создаст новый под для восстановления желаемого состояния.</p>
+                    </div>
+                </div>
+
+                <h3>Компоненты Worker Node</h3>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>kubelet</h3>
+                        <p>Агент, работающий на каждом рабочем узле. kubelet получает от API Server спецификации подов (PodSpec), которые должны работать на данном узле, и обеспечивает запуск и работоспособность указанных контейнеров. Он регулярно отправляет heartbeat в API Server, сообщая о состоянии узла и подов. Если контейнер аварийно завершается, kubelet перезапустит его в соответствии с политикой перезапуска (restartPolicy).</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>kube-proxy</h3>
+                        <p>Сетевой прокси, работающий на каждом узле и реализующий абстракцию сервисов Kubernetes. kube-proxy настраивает правила iptables (или IPVS) для маршрутизации трафика к подам, стоящим за сервисом. Когда вы обращаетесь к сервису по его ClusterIP, именно kube-proxy перенаправляет запрос к одному из подов, обеспечивая балансировку нагрузки.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Container Runtime</h3>
+                        <p>Среда выполнения контейнеров &mdash; программа, которая непосредственно запускает и управляет контейнерами. Kubernetes поддерживает любой runtime, совместимый с CRI (Container Runtime Interface). Наиболее распространённые варианты: <strong>containerd</strong> (используется по умолчанию в большинстве дистрибутивов K8s), <strong>CRI-O</strong> (разработан специально для Kubernetes). Docker как runtime в Kubernetes устарел (dockershim удалён в K8s 1.24), хотя образы Docker по-прежнему полностью совместимы.</p>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> в управляемых облачных сервисах (EKS, GKE, AKS) Control Plane полностью управляется провайдером &mdash; вам не нужно заботиться о его настройке, обновлении и резервном копировании etcd. Вы управляете только рабочими узлами и развёртыванием приложений.
+                </div>
+            </div>
+
+            <!-- ===== ОСНОВНЫЕ ОБЪЕКТЫ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Основные объекты</h2>
+
+                <p>Kubernetes оперирует декларативной моделью: вы описываете желаемое состояние системы в YAML-манифестах, а Kubernetes автоматически приводит текущее состояние к желаемому. Каждый объект Kubernetes имеет спецификацию (spec) &mdash; что вы хотите, и статус (status) &mdash; текущее состояние. Контроллеры постоянно сравнивают spec и status, выполняя необходимые действия для их сближения. Этот принцип называется <strong>reconciliation loop</strong> (цикл согласования).</p>
+
+                <h3>Pod</h3>
+
+                <p>Pod &mdash; наименьшая развёртываемая единица в Kubernetes. Под содержит один или несколько контейнеров, которые разделяют сетевое пространство имён (общий IP-адрес и порты), хранилище (общие тома) и пространство имён IPC. В подавляющем большинстве случаев один под содержит один контейнер с приложением. Шаблон с несколькими контейнерами в одном поде (sidecar pattern) используется, когда контейнерам необходимо тесное взаимодействие: например, основной контейнер с приложением и sidecar-контейнер для сбора логов или проксирования трафика (Envoy, Fluentd).</p>
+
+                <p>Под по своей природе эфемерен &mdash; он может быть уничтожен и пересоздан в любой момент. У пода нет фиксированного IP-адреса между перезапусками, нет гарантии запуска на том же узле. Поэтому поды никогда не создаются напрямую &mdash; вместо этого используются контроллеры более высокого уровня (Deployment, StatefulSet), которые управляют жизненным циклом подов.</p>
+
+                <div class="code-block">
+                    <div class="code-header">pod.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">Pod</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">my-app</span>
+  <span class="kw">labels:</span>
+    <span class="kw">app:</span> <span class="st">my-app</span>
+<span class="kw">spec:</span>
+  <span class="kw">containers:</span>
+    - <span class="kw">name:</span> <span class="st">app</span>
+      <span class="kw">image:</span> <span class="st">nginx:1.25</span>
+      <span class="kw">ports:</span>
+        - <span class="kw">containerPort:</span> <span class="st">80</span>
+      <span class="kw">resources:</span>
+        <span class="kw">requests:</span>
+          <span class="kw">cpu:</span> <span class="st">"100m"</span>
+          <span class="kw">memory:</span> <span class="st">"128Mi"</span>
+        <span class="kw">limits:</span>
+          <span class="kw">cpu:</span> <span class="st">"250m"</span>
+          <span class="kw">memory:</span> <span class="st">"256Mi"</span></code></pre>
+                </div>
+
+                <h3>ReplicaSet</h3>
+
+                <p>ReplicaSet гарантирует, что указанное количество идентичных подов всегда запущено. Если один из подов аварийно завершится или узел, на котором он работал, станет недоступным, ReplicaSet автоматически создаст новый под для восстановления желаемого количества реплик. ReplicaSet использует селекторы меток (label selectors) для определения, какими подами он управляет. На практике ReplicaSet редко создаётся напрямую &mdash; обычно он управляется через Deployment, который добавляет поверх ReplicaSet стратегии обновления и историю ревизий.</p>
+
+                <h3>Deployment</h3>
+
+                <p>Deployment &mdash; основной объект для развёртывания stateless-приложений в Kubernetes. Он управляет ReplicaSet и предоставляет декларативные обновления: вы изменяете образ контейнера в спецификации, и Deployment автоматически выполняет rolling update &mdash; постепенно создаёт поды с новой версией и удаляет старые, обеспечивая непрерывную доступность приложения. При обнаружении проблем можно выполнить откат к предыдущей ревизии одной командой.</p>
+
+                <p>Deployment поддерживает две стратегии обновления: <strong>RollingUpdate</strong> (по умолчанию) &mdash; постепенная замена подов с настраиваемыми параметрами <code>maxSurge</code> (сколько дополнительных подов можно создать сверх желаемого количества) и <code>maxUnavailable</code> (сколько подов могут быть недоступны одновременно); <strong>Recreate</strong> &mdash; удаление всех старых подов перед созданием новых, что приводит к кратковременному простою, но гарантирует отсутствие двух одновременно работающих версий.</p>
+
+                <div class="code-block">
+                    <div class="code-header">deployment.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">apps/v1</span>
+<span class="kw">kind:</span> <span class="st">Deployment</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">my-app</span>
+<span class="kw">spec:</span>
+  <span class="kw">replicas:</span> <span class="st">3</span>
+  <span class="kw">selector:</span>
+    <span class="kw">matchLabels:</span>
+      <span class="kw">app:</span> <span class="st">my-app</span>
+  <span class="kw">strategy:</span>
+    <span class="kw">type:</span> <span class="st">RollingUpdate</span>
+    <span class="kw">rollingUpdate:</span>
+      <span class="kw">maxSurge:</span> <span class="st">1</span>
+      <span class="kw">maxUnavailable:</span> <span class="st">0</span>
+  <span class="kw">template:</span>
+    <span class="kw">metadata:</span>
+      <span class="kw">labels:</span>
+        <span class="kw">app:</span> <span class="st">my-app</span>
+    <span class="kw">spec:</span>
+      <span class="kw">containers:</span>
+        - <span class="kw">name:</span> <span class="st">app</span>
+          <span class="kw">image:</span> <span class="st">my-app:1.0.0</span>
+          <span class="kw">ports:</span>
+            - <span class="kw">containerPort:</span> <span class="st">8080</span>
+          <span class="kw">readinessProbe:</span>
+            <span class="kw">httpGet:</span>
+              <span class="kw">path:</span> <span class="st">/healthz</span>
+              <span class="kw">port:</span> <span class="st">8080</span>
+            <span class="kw">initialDelaySeconds:</span> <span class="st">5</span>
+            <span class="kw">periodSeconds:</span> <span class="st">10</span></code></pre>
+                </div>
+
+                <h3>DaemonSet</h3>
+
+                <p>DaemonSet гарантирует, что на каждом (или выбранных) узле кластера запущена ровно одна копия пода. Когда новый узел добавляется в кластер, DaemonSet автоматически разворачивает на нём под; при удалении узла &mdash; под удаляется. DaemonSet идеально подходит для задач, которые должны выполняться на каждом узле: сбор логов (Fluentd, Filebeat), мониторинг узлов (node-exporter, Datadog agent), сетевые плагины (Calico, Cilium), управление хранилищем.</p>
+
+                <h3>StatefulSet</h3>
+
+                <p>StatefulSet предназначен для stateful-приложений, которым требуются стабильные сетевые идентификаторы и персистентное хранилище. В отличие от Deployment, где поды взаимозаменяемы, каждый под в StatefulSet получает уникальное, предсказуемое имя (например, <code>mysql-0</code>, <code>mysql-1</code>, <code>mysql-2</code>) и собственный PersistentVolumeClaim. Поды создаются и удаляются последовательно (по порядку), что критически важно для баз данных, очередей сообщений и других систем, где порядок запуска и стабильная идентификация имеют значение. Типичные примеры: PostgreSQL, MySQL, MongoDB, Kafka, Elasticsearch, Redis.</p>
+
+                <h3>Job и CronJob</h3>
+
+                <p><strong>Job</strong> создаёт один или несколько подов и гарантирует, что указанное количество из них успешно завершится. В отличие от Deployment, где поды работают непрерывно, Job предназначен для одноразовых задач: миграция базы данных, обработка данных, генерация отчётов. Если под завершается с ошибкой, Job перезапустит его (в пределах настроенного количества попыток). Параметр <code>completions</code> задаёт, сколько подов должны успешно завершиться, а <code>parallelism</code> &mdash; сколько подов могут работать одновременно.</p>
+
+                <p><strong>CronJob</strong> &mdash; расширение Job для периодических задач. Он создаёт Job по расписанию, заданному в формате cron. Примеры: ежедневное резервное копирование базы данных, еженочная очистка временных файлов, периодическая отправка отчётов. Параметр <code>concurrencyPolicy</code> определяет, что делать, если предыдущий Job ещё не завершился к моменту запуска нового: <code>Allow</code> (запустить параллельно), <code>Forbid</code> (пропустить) или <code>Replace</code> (заменить предыдущий).</p>
+
+                <div class="code-block">
+                    <div class="code-header">cronjob.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">batch/v1</span>
+<span class="kw">kind:</span> <span class="st">CronJob</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">db-backup</span>
+<span class="kw">spec:</span>
+  <span class="kw">schedule:</span> <span class="st">"0 2 * * *"</span>          <span class="cm"># каждый день в 02:00</span>
+  <span class="kw">concurrencyPolicy:</span> <span class="st">Forbid</span>
+  <span class="kw">successfulJobsHistoryLimit:</span> <span class="st">3</span>
+  <span class="kw">failedJobsHistoryLimit:</span> <span class="st">1</span>
+  <span class="kw">jobTemplate:</span>
+    <span class="kw">spec:</span>
+      <span class="kw">template:</span>
+        <span class="kw">spec:</span>
+          <span class="kw">containers:</span>
+            - <span class="kw">name:</span> <span class="st">backup</span>
+              <span class="kw">image:</span> <span class="st">postgres:16</span>
+              <span class="kw">command:</span> [<span class="st">"pg_dump"</span>, <span class="st">"-h"</span>, <span class="st">"postgres-svc"</span>, <span class="st">"-U"</span>, <span class="st">"admin"</span>, <span class="st">"mydb"</span>]
+          <span class="kw">restartPolicy:</span> <span class="st">OnFailure</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== СЕРВИСЫ И СЕТЕВАЯ МОДЕЛЬ ===== -->
+            <div class="section">
+                <div class="section-label">Сеть</div>
+                <h2>Сервисы и сетевая модель</h2>
+
+                <p>Сетевая модель Kubernetes основана на нескольких фундаментальных принципах: каждый под получает собственный уникальный IP-адрес; все поды могут общаться друг с другом напрямую без NAT; все узлы могут общаться со всеми подами без NAT. Эти принципы реализуются с помощью CNI-плагинов (Container Network Interface) &mdash; таких как Calico, Cilium, Flannel или Weave Net. CNI-плагин отвечает за настройку сети на каждом узле, создание виртуальных интерфейсов для подов и маршрутизацию трафика между узлами.</p>
+
+                <p>Поскольку поды эфемерны и их IP-адреса меняются при пересоздании, Kubernetes вводит абстракцию <strong>Service</strong> &mdash; стабильную точку доступа к группе подов. Сервис определяется набором меток (label selector) и получает неизменный виртуальный IP-адрес (ClusterIP) и DNS-имя. Когда клиент обращается к сервису, запрос автоматически направляется к одному из подов, соответствующих селектору, обеспечивая балансировку нагрузки.</p>
+
+                <h3>Типы сервисов</h3>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>ClusterIP</h3>
+                        <p>Тип по умолчанию. Создаёт виртуальный IP-адрес, доступный только внутри кластера. Подходит для межсервисного взаимодействия: например, фронтенд обращается к бэкенду через <code>http://backend-svc:8080</code>. ClusterIP не доступен извне кластера, что обеспечивает изоляцию внутренних сервисов.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>NodePort</h3>
+                        <p>Расширяет ClusterIP, открывая статический порт (из диапазона 30000&ndash;32767) на каждом узле кластера. Трафик, поступающий на <code>&lt;NodeIP&gt;:&lt;NodePort&gt;</code>, перенаправляется к соответствующему сервису. Используется для простого внешнего доступа в dev-окружениях, но не рекомендуется для продакшена из-за ограниченности диапазона портов и отсутствия SSL-терминации.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>LoadBalancer</h3>
+                        <p>Расширяет NodePort, автоматически создавая внешний балансировщик нагрузки у облачного провайдера (AWS ELB, GCP Load Balancer, Azure LB). Каждый сервис типа LoadBalancer получает собственный внешний IP-адрес. Это стандартный способ предоставить доступ к сервису из интернета в облачных окружениях, но каждый такой сервис создаёт отдельный (и платный) балансировщик.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>ExternalName</h3>
+                        <p>Создаёт CNAME-запись в DNS кластера, перенаправляющую на внешний домен. Не создаёт прокси и не перенаправляет трафик &mdash; просто возвращает DNS-ответ. Используется для интеграции с внешними сервисами: например, <code>database.prod.svc.cluster.local</code> может ссылаться на <code>mydb.us-east-1.rds.amazonaws.com</code>.</p>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">service.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">Service</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">my-app-svc</span>
+<span class="kw">spec:</span>
+  <span class="kw">type:</span> <span class="st">ClusterIP</span>
+  <span class="kw">selector:</span>
+    <span class="kw">app:</span> <span class="st">my-app</span>
+  <span class="kw">ports:</span>
+    - <span class="kw">port:</span> <span class="st">80</span>             <span class="cm"># порт сервиса</span>
+      <span class="kw">targetPort:</span> <span class="st">8080</span>     <span class="cm"># порт контейнера</span>
+      <span class="kw">protocol:</span> <span class="st">TCP</span></code></pre>
+                </div>
+
+                <h3>Service Discovery через DNS</h3>
+
+                <p>В каждом кластере Kubernetes работает встроенный DNS-сервер (CoreDNS). Каждый сервис автоматически получает DNS-запись в формате <code>&lt;service-name&gt;.&lt;namespace&gt;.svc.cluster.local</code>. Внутри одного namespace можно обращаться к сервису просто по имени: <code>http://my-app-svc</code>. Из другого namespace нужно указать полное имя: <code>http://my-app-svc.production.svc.cluster.local</code>. Это стандартный механизм service discovery в Kubernetes, не требующий дополнительной настройки.</p>
+
+                <h3>Ingress и Ingress Controller</h3>
+
+                <p>Ingress &mdash; объект Kubernetes, который определяет правила маршрутизации HTTP/HTTPS-трафика из внешнего мира к сервисам внутри кластера. В отличие от LoadBalancer, где каждый сервис получает отдельный IP, Ingress позволяет использовать один внешний IP для множества сервисов, распределяя трафик на основе имени хоста или пути URL. Например, <code>api.example.com</code> направляется к сервису API, а <code>app.example.com</code> &mdash; к фронтенду.</p>
+
+                <p>Ingress сам по себе &mdash; лишь набор правил. Для их исполнения необходим <strong>Ingress Controller</strong> &mdash; под, работающий в кластере и реализующий эти правила. Наиболее популярные контроллеры: <strong>ingress-nginx</strong> (основан на Nginx, поддерживается сообществом Kubernetes), <strong>Traefik</strong> (автоматическое обнаружение сервисов, встроенная поддержка Let's Encrypt), <strong>HAProxy Ingress</strong>. В облачных средах часто используются managed-варианты: AWS ALB Ingress Controller, GCP HTTP(S) Load Balancer.</p>
+
+                <div class="code-block">
+                    <div class="code-header">ingress.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">networking.k8s.io/v1</span>
+<span class="kw">kind:</span> <span class="st">Ingress</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">my-ingress</span>
+  <span class="kw">annotations:</span>
+    <span class="kw">nginx.ingress.kubernetes.io/rewrite-target:</span> <span class="st">/</span>
+<span class="kw">spec:</span>
+  <span class="kw">ingressClassName:</span> <span class="st">nginx</span>
+  <span class="kw">rules:</span>
+    - <span class="kw">host:</span> <span class="st">app.example.com</span>
+      <span class="kw">http:</span>
+        <span class="kw">paths:</span>
+          - <span class="kw">path:</span> <span class="st">/</span>
+            <span class="kw">pathType:</span> <span class="st">Prefix</span>
+            <span class="kw">backend:</span>
+              <span class="kw">service:</span>
+                <span class="kw">name:</span> <span class="st">my-app-svc</span>
+                <span class="kw">port:</span>
+                  <span class="kw">number:</span> <span class="st">80</span>
+  <span class="kw">tls:</span>
+    - <span class="kw">hosts:</span>
+        - <span class="st">app.example.com</span>
+      <span class="kw">secretName:</span> <span class="st">app-tls-secret</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== КОНФИГУРАЦИЯ И СЕКРЕТЫ ===== -->
+            <div class="section">
+                <div class="section-label">Конфигурация</div>
+                <h2>Конфигурация и секреты</h2>
+
+                <p>Хорошая практика &mdash; отделять конфигурацию от образа контейнера. Один и тот же образ приложения должен работать в dev, staging и production, отличаясь только конфигурацией (URL базы данных, ключи API, уровень логирования). Kubernetes предоставляет два механизма для этого: <strong>ConfigMap</strong> для несекретных данных и <strong>Secret</strong> для конфиденциальной информации.</p>
+
+                <h3>ConfigMap</h3>
+
+                <p>ConfigMap хранит конфигурационные данные в виде пар ключ-значение. Данные ConfigMap можно передать в под несколькими способами: как переменные окружения (<code>envFrom</code> или <code>env.valueFrom</code>), как файлы в смонтированном томе (<code>volumeMount</code>), или как аргументы командной строки. При монтировании ConfigMap как тома обновление данных в ConfigMap автоматически обновит файлы в поде (с небольшой задержкой), что позволяет менять конфигурацию без пересоздания подов.</p>
+
+                <div class="code-block">
+                    <div class="code-header">configmap.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">ConfigMap</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">app-config</span>
+<span class="kw">data:</span>
+  <span class="kw">DATABASE_HOST:</span> <span class="st">"postgres-svc"</span>
+  <span class="kw">DATABASE_PORT:</span> <span class="st">"5432"</span>
+  <span class="kw">LOG_LEVEL:</span> <span class="st">"info"</span>
+  <span class="kw">nginx.conf:</span> <span class="st">|</span>
+    server {
+        listen 80;
+        server_name localhost;
+        location / {
+            proxy_pass http://backend:8080;
+        }
+    }</code></pre>
+                </div>
+
+                <h3>Secret</h3>
+
+                <p>Secret предназначен для хранения конфиденциальных данных: паролей, токенов, TLS-сертификатов, SSH-ключей. Данные в Secret кодируются в base64, но это <strong>не является шифрованием</strong> &mdash; base64 легко декодируется. Для реальной защиты необходимо включить шифрование etcd at rest (EncryptionConfiguration) и использовать RBAC для ограничения доступа к секретам. Kubernetes поддерживает несколько типов Secret: <code>Opaque</code> (произвольные данные, по умолчанию), <code>kubernetes.io/dockerconfigjson</code> (учётные данные для Docker registry), <code>kubernetes.io/tls</code> (TLS-сертификат и ключ).</p>
+
+                <div class="code-block">
+                    <div class="code-header">secret.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">Secret</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">db-credentials</span>
+<span class="kw">type:</span> <span class="st">Opaque</span>
+<span class="kw">stringData:</span>                   <span class="cm"># stringData принимает незакодированные строки</span>
+  <span class="kw">DB_USER:</span> <span class="st">"admin"</span>
+  <span class="kw">DB_PASSWORD:</span> <span class="st">"s3cureP@ssw0rd"</span></code></pre>
+                </div>
+
+                <h3>Использование в подах</h3>
+
+                <div class="code-block">
+                    <div class="code-header">Передача конфигурации в под</div>
+                    <pre><code><span class="kw">spec:</span>
+  <span class="kw">containers:</span>
+    - <span class="kw">name:</span> <span class="st">app</span>
+      <span class="kw">image:</span> <span class="st">my-app:1.0.0</span>
+      <span class="kw">envFrom:</span>
+        - <span class="kw">configMapRef:</span>
+            <span class="kw">name:</span> <span class="st">app-config</span>          <span class="cm"># все ключи как env-переменные</span>
+        - <span class="kw">secretRef:</span>
+            <span class="kw">name:</span> <span class="st">db-credentials</span>       <span class="cm"># секреты как env-переменные</span>
+      <span class="kw">volumeMounts:</span>
+        - <span class="kw">name:</span> <span class="st">config-volume</span>
+          <span class="kw">mountPath:</span> <span class="st">/etc/app/config</span>
+          <span class="kw">readOnly:</span> <span class="st">true</span>
+  <span class="kw">volumes:</span>
+    - <span class="kw">name:</span> <span class="st">config-volume</span>
+      <span class="kw">configMap:</span>
+        <span class="kw">name:</span> <span class="st">app-config</span>              <span class="cm"># ConfigMap как файлы в томе</span></code></pre>
+                </div>
+
+                <h3>External Secrets Operator</h3>
+
+                <p>В продакшене хранение секретов непосредственно в Kubernetes (даже с шифрованием etcd) часто недостаточно: манифесты секретов могут попасть в Git, ротация паролей требует ручного обновления. <strong>External Secrets Operator</strong> (ESO) решает эту проблему, синхронизируя секреты из внешних хранилищ &mdash; AWS Secrets Manager, HashiCorp Vault, Google Secret Manager, Azure Key Vault &mdash; в Kubernetes Secrets. Вы создаёте объект <code>ExternalSecret</code>, указывая источник, а ESO автоматически создаёт и обновляет соответствующий Kubernetes Secret.</p>
+            </div>
+
+            <!-- ===== ХРАНИЛИЩЕ ===== -->
+            <div class="section">
+                <div class="section-label">Хранилище</div>
+                <h2>Хранилище</h2>
+
+                <p>Контейнеры по умолчанию используют эфемерное хранилище &mdash; все данные, записанные внутри контейнера, теряются при его перезапуске. Для stateful-приложений (базы данных, файловые хранилища, очереди сообщений) необходимо персистентное хранилище, которое сохраняет данные независимо от жизненного цикла подов. Kubernetes предоставляет абстракцию хранилища через три основных объекта: PersistentVolume, PersistentVolumeClaim и StorageClass.</p>
+
+                <h3>PersistentVolume и PersistentVolumeClaim</h3>
+
+                <p><strong>PersistentVolume (PV)</strong> &mdash; это ресурс хранилища в кластере, предоставленный администратором или динамически созданный через StorageClass. PV существует независимо от подов и имеет собственный жизненный цикл. <strong>PersistentVolumeClaim (PVC)</strong> &mdash; это запрос на хранилище от пользователя. PVC указывает требуемый размер и режим доступа, а Kubernetes находит подходящий PV и связывает их (binding). Такое разделение позволяет абстрагировать потребителя (разработчика) от деталей реализации хранилища (администратора).</p>
+
+                <p><strong>StorageClass</strong> определяет тип хранилища и параметры динамического выделения. Вместо того чтобы заранее создавать PV, администратор создаёт StorageClass (например, <code>gp3</code> для AWS EBS или <code>standard</code> для GCE Persistent Disk), и при создании PVC нужного класса Kubernetes автоматически создаст PV необходимого размера. Это называется <strong>dynamic provisioning</strong> и является стандартным подходом в облачных окружениях.</p>
+
+                <h3>Режимы доступа</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Режим</th>
+                                <th>Сокращение</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ReadWriteOnce</td>
+                                <td><code>RWO</code></td>
+                                <td>Чтение и запись одним узлом. Наиболее распространённый режим для блочных устройств (AWS EBS, GCE PD).</td>
+                            </tr>
+                            <tr>
+                                <td>ReadOnlyMany</td>
+                                <td><code>ROX</code></td>
+                                <td>Только чтение множеством узлов. Подходит для раздачи общих данных (конфигурации, статические файлы).</td>
+                            </tr>
+                            <tr>
+                                <td>ReadWriteMany</td>
+                                <td><code>RWX</code></td>
+                                <td>Чтение и запись множеством узлов одновременно. Требуют сетевых файловых систем (NFS, AWS EFS, CephFS).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">pvc.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">PersistentVolumeClaim</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">postgres-data</span>
+<span class="kw">spec:</span>
+  <span class="kw">accessModes:</span>
+    - <span class="st">ReadWriteOnce</span>
+  <span class="kw">storageClassName:</span> <span class="st">gp3</span>
+  <span class="kw">resources:</span>
+    <span class="kw">requests:</span>
+      <span class="kw">storage:</span> <span class="st">20Gi</span>
+<span class="cm">---</span>
+<span class="cm"># Использование PVC в поде</span>
+<span class="kw">spec:</span>
+  <span class="kw">containers:</span>
+    - <span class="kw">name:</span> <span class="st">postgres</span>
+      <span class="kw">image:</span> <span class="st">postgres:16</span>
+      <span class="kw">volumeMounts:</span>
+        - <span class="kw">name:</span> <span class="st">data</span>
+          <span class="kw">mountPath:</span> <span class="st">/var/lib/postgresql/data</span>
+  <span class="kw">volumes:</span>
+    - <span class="kw">name:</span> <span class="st">data</span>
+      <span class="kw">persistentVolumeClaim:</span>
+        <span class="kw">claimName:</span> <span class="st">postgres-data</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Reclaim Policy:</strong> определяет, что происходит с PV после удаления PVC. <code>Retain</code> &mdash; PV сохраняется (данные не удаляются, требуется ручная очистка). <code>Delete</code> &mdash; PV и соответствующее физическое хранилище удаляются автоматически (по умолчанию для dynamic provisioning). Для критически важных данных всегда используйте <code>Retain</code>.
+                </div>
+            </div>
+
+            <!-- ===== KUBECTL ===== -->
+            <div class="section">
+                <div class="section-label">Инструменты</div>
+                <h2>Kubectl</h2>
+
+                <p><code>kubectl</code> &mdash; основной инструмент командной строки для взаимодействия с кластером Kubernetes. Все операции &mdash; от просмотра состояния до развёртывания приложений &mdash; выполняются через kubectl. Он отправляет REST-запросы к API Server и представляет результаты в удобном формате. Конфигурация подключения хранится в файле <code>~/.kube/config</code> (kubeconfig), который может содержать настройки для нескольких кластеров.</p>
+
+                <p>Kubectl поддерживает концепцию <strong>контекстов</strong>: каждый контекст объединяет кластер, пользователя и namespace по умолчанию. Переключение между контекстами позволяет быстро менять кластер (dev, staging, production) одной командой. <strong>Namespace</strong> &mdash; это механизм логической изоляции ресурсов в кластере. Разные команды или окружения могут работать в отдельных namespace, что упрощает управление доступом и организацию ресурсов.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Основные команды kubectl</div>
+                    <pre><code><span class="cm"># --- Просмотр ресурсов ---</span>
+<span class="fn">kubectl</span> <span class="st">get</span> pods                         <span class="cm"># список подов в текущем namespace</span>
+<span class="fn">kubectl</span> <span class="st">get</span> pods <span class="fl">-A</span>                      <span class="cm"># поды во всех namespace</span>
+<span class="fn">kubectl</span> <span class="st">get</span> pods <span class="fl">-o wide</span>                 <span class="cm"># подробный вывод (IP, узел)</span>
+<span class="fn">kubectl</span> <span class="st">get</span> deploy,svc,ingress            <span class="cm"># несколько типов ресурсов</span>
+<span class="fn">kubectl</span> <span class="st">describe</span> pod my-app-7d9f8b6-x2k  <span class="cm"># детальная информация о поде</span>
+
+<span class="cm"># --- Логи и отладка ---</span>
+<span class="fn">kubectl</span> <span class="st">logs</span> my-app-7d9f8b6-x2k          <span class="cm"># логи пода</span>
+<span class="fn">kubectl</span> <span class="st">logs</span> <span class="fl">-f</span> my-app-7d9f8b6-x2k       <span class="cm"># следить за логами в реальном времени</span>
+<span class="fn">kubectl</span> <span class="st">logs</span> <span class="fl">-l</span> app=my-app               <span class="cm"># логи всех подов по метке</span>
+<span class="fn">kubectl</span> <span class="st">exec</span> <span class="fl">-it</span> my-app-7d9f8b6-x2k <span class="fl">--</span> <span class="st">/bin/sh</span>   <span class="cm"># войти в контейнер</span>
+<span class="fn">kubectl</span> <span class="st">port-forward</span> svc/my-app-svc <span class="st">8080:80</span>        <span class="cm"># проброс порта на локальную машину</span>
+<span class="fn">kubectl</span> <span class="st">top</span> pods                         <span class="cm"># потребление CPU/RAM подами</span>
+<span class="fn">kubectl</span> <span class="st">top</span> nodes                        <span class="cm"># потребление CPU/RAM узлами</span>
+
+<span class="cm"># --- Управление ресурсами ---</span>
+<span class="fn">kubectl</span> <span class="st">apply</span> <span class="fl">-f</span> deployment.yaml         <span class="cm"># создать/обновить ресурс из файла</span>
+<span class="fn">kubectl</span> <span class="st">delete</span> <span class="fl">-f</span> deployment.yaml        <span class="cm"># удалить ресурс по манифесту</span>
+<span class="fn">kubectl</span> <span class="st">delete</span> pod my-app-7d9f8b6-x2k    <span class="cm"># удалить конкретный под</span>
+<span class="fn">kubectl</span> <span class="st">scale</span> deploy/my-app <span class="fl">--replicas=5</span>  <span class="cm"># масштабировать до 5 реплик</span>
+
+<span class="cm"># --- Rolling update ---</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> status deploy/my-app     <span class="cm"># статус обновления</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> history deploy/my-app    <span class="cm"># история ревизий</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> undo deploy/my-app       <span class="cm"># откат к предыдущей ревизии</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> undo deploy/my-app <span class="fl">--to-revision=3</span>  <span class="cm"># откат к конкретной ревизии</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Контексты и namespace</div>
+                    <pre><code><span class="cm"># --- Контексты ---</span>
+<span class="fn">kubectl</span> <span class="st">config</span> get-contexts               <span class="cm"># список всех контекстов</span>
+<span class="fn">kubectl</span> <span class="st">config</span> current-context              <span class="cm"># текущий контекст</span>
+<span class="fn">kubectl</span> <span class="st">config</span> use-context production       <span class="cm"># переключиться на контекст</span>
+<span class="fn">kubectl</span> <span class="st">config</span> set-context <span class="fl">--current</span> <span class="fl">--namespace=staging</span>  <span class="cm"># сменить namespace по умолчанию</span>
+
+<span class="cm"># --- Namespace ---</span>
+<span class="fn">kubectl</span> <span class="st">get</span> namespaces                     <span class="cm"># список namespace</span>
+<span class="fn">kubectl</span> <span class="st">create</span> namespace staging            <span class="cm"># создать namespace</span>
+<span class="fn">kubectl</span> <span class="st">get</span> pods <span class="fl">-n</span> kube-system            <span class="cm"># поды в namespace kube-system</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Совет:</strong> установите <a href="https://github.com/ahmetb/kubectx" target="_blank">kubectx и kubens</a> для быстрого переключения контекстов и namespace. Также рекомендуется настроить алиас <code>alias k=kubectl</code> и установить автодополнение: <code>source &lt;(kubectl completion bash)</code>.
+                </div>
+            </div>
+
+            <!-- ===== HELM ===== -->
+            <div class="section">
+                <div class="section-label">Пакетный менеджер</div>
+                <h2>Helm</h2>
+
+                <p>Helm &mdash; пакетный менеджер для Kubernetes, аналог apt для Ubuntu или npm для Node.js. Вместо того чтобы управлять десятками отдельных YAML-манифестов (Deployment, Service, ConfigMap, Ingress, PVC и т.д.), Helm упаковывает их в единый пакет &mdash; <strong>chart</strong> (чарт). Chart содержит шаблоны манифестов с параметрами, которые можно настраивать через файл <code>values.yaml</code>. Это позволяет развернуть сложное приложение одной командой и легко управлять его жизненным циклом: обновлять, откатывать, удалять.</p>
+
+                <p>Каждая установка чарта в кластер создаёт <strong>release</strong> (релиз) &mdash; конкретный экземпляр чарта с определённой конфигурацией. Один и тот же чарт можно установить несколько раз с разными именами и параметрами: например, <code>postgres-dev</code> и <code>postgres-prod</code> из одного и того же чарта PostgreSQL, но с разными настройками ресурсов и хранилища. Helm хранит историю релизов, что позволяет откатиться к предыдущей версии в случае проблем.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Основные команды Helm</div>
+                    <pre><code><span class="cm"># --- Управление репозиториями ---</span>
+<span class="fn">helm</span> <span class="st">repo</span> add bitnami https://charts.bitnami.com/bitnami
+<span class="fn">helm</span> <span class="st">repo</span> update                          <span class="cm"># обновить индексы репозиториев</span>
+<span class="fn">helm</span> <span class="st">search</span> repo nginx                    <span class="cm"># найти чарт в репозиториях</span>
+
+<span class="cm"># --- Установка и управление ---</span>
+<span class="fn">helm</span> <span class="st">install</span> my-nginx bitnami/nginx       <span class="cm"># установить чарт</span>
+<span class="fn">helm</span> <span class="st">install</span> my-nginx bitnami/nginx <span class="fl">-f</span> values-prod.yaml  <span class="cm"># с кастомными значениями</span>
+<span class="fn">helm</span> <span class="st">upgrade</span> my-nginx bitnami/nginx       <span class="cm"># обновить релиз</span>
+<span class="fn">helm</span> <span class="st">rollback</span> my-nginx 1                  <span class="cm"># откатить к ревизии 1</span>
+<span class="fn">helm</span> <span class="st">uninstall</span> my-nginx                   <span class="cm"># удалить релиз</span>
+
+<span class="cm"># --- Информация ---</span>
+<span class="fn">helm</span> <span class="st">list</span>                                  <span class="cm"># все релизы в текущем namespace</span>
+<span class="fn">helm</span> <span class="st">list</span> <span class="fl">-A</span>                               <span class="cm"># все релизы во всех namespace</span>
+<span class="fn">helm</span> <span class="st">status</span> my-nginx                      <span class="cm"># статус релиза</span>
+<span class="fn">helm</span> <span class="st">history</span> my-nginx                     <span class="cm"># история ревизий</span>
+<span class="fn">helm</span> <span class="st">show</span> values bitnami/nginx             <span class="cm"># все настраиваемые значения чарта</span></code></pre>
+                </div>
+
+                <h3>Создание собственного чарта</h3>
+
+                <p>Для создания собственного чарта используйте команду <code>helm create my-chart</code>, которая сгенерирует стандартную структуру каталогов. Файл <code>Chart.yaml</code> содержит метаданные чарта (имя, версия, описание). Файл <code>values.yaml</code> &mdash; значения по умолчанию для всех параметров. Каталог <code>templates/</code> содержит шаблоны Kubernetes-манифестов с использованием Go template language. Например, <code>{{ .Values.replicaCount }}</code> будет заменён значением из values.yaml при рендеринге.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Структура Helm chart</div>
+                    <pre><code>my-chart/
+  Chart.yaml          <span class="cm"># метаданные чарта</span>
+  values.yaml         <span class="cm"># значения по умолчанию</span>
+  templates/
+    deployment.yaml   <span class="cm"># шаблон Deployment</span>
+    service.yaml      <span class="cm"># шаблон Service</span>
+    ingress.yaml      <span class="cm"># шаблон Ingress</span>
+    configmap.yaml    <span class="cm"># шаблон ConfigMap</span>
+    _helpers.tpl      <span class="cm"># вспомогательные шаблоны</span>
+    NOTES.txt         <span class="cm"># информация после установки</span>
+  charts/             <span class="cm"># зависимости (субчарты)</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== РЕСУРСЫ И АВТОСКЕЙЛИНГ ===== -->
+            <div class="section">
+                <div class="section-label">Масштабирование</div>
+                <h2>Ресурсы и автоскейлинг</h2>
+
+                <p>Каждый контейнер в Kubernetes может указать требования к ресурсам: <strong>requests</strong> (запрос) &mdash; минимальное количество ресурсов, гарантированное контейнеру, и <strong>limits</strong> (лимит) &mdash; максимальное количество ресурсов, которое контейнер может использовать. Scheduler использует requests для выбора узла: под будет назначен на узел, где доступно достаточно ресурсов для удовлетворения запросов всех его контейнеров. Limits ограничивают потребление: если контейнер превысит лимит по памяти, он будет убит (OOMKilled); если превысит лимит по CPU, он будет ограничен (throttled).</p>
+
+                <p>На основе requests и limits Kubernetes присваивает подам классы качества обслуживания (<strong>QoS classes</strong>). <strong>Guaranteed</strong> &mdash; requests равны limits для всех контейнеров; такие поды получают наивысший приоритет и убиваются последними при нехватке ресурсов на узле. <strong>Burstable</strong> &mdash; хотя бы один контейнер имеет request, но requests не равны limits. <strong>BestEffort</strong> &mdash; ни один контейнер не имеет ни requests, ни limits; такие поды убиваются первыми. Рекомендуется всегда задавать requests и limits для production-нагрузок.</p>
+
+                <h3>HorizontalPodAutoscaler (HPA)</h3>
+
+                <p>HPA автоматически масштабирует количество реплик Deployment (или ReplicaSet, StatefulSet) на основе наблюдаемых метрик. Наиболее распространённый вариант &mdash; масштабирование по загрузке CPU: если средняя утилизация CPU подов превышает заданный порог (например, 70%), HPA увеличивает количество реплик; если утилизация падает &mdash; уменьшает. Для работы HPA необходим <strong>metrics-server</strong> &mdash; компонент, собирающий метрики использования ресурсов с kubelet.</p>
+
+                <div class="code-block">
+                    <div class="code-header">hpa.yaml</div>
+                    <pre><code><span class="kw">apiVersion:</span> <span class="st">autoscaling/v2</span>
+<span class="kw">kind:</span> <span class="st">HorizontalPodAutoscaler</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">my-app-hpa</span>
+<span class="kw">spec:</span>
+  <span class="kw">scaleTargetRef:</span>
+    <span class="kw">apiVersion:</span> <span class="st">apps/v1</span>
+    <span class="kw">kind:</span> <span class="st">Deployment</span>
+    <span class="kw">name:</span> <span class="st">my-app</span>
+  <span class="kw">minReplicas:</span> <span class="st">2</span>
+  <span class="kw">maxReplicas:</span> <span class="st">10</span>
+  <span class="kw">metrics:</span>
+    - <span class="kw">type:</span> <span class="st">Resource</span>
+      <span class="kw">resource:</span>
+        <span class="kw">name:</span> <span class="st">cpu</span>
+        <span class="kw">target:</span>
+          <span class="kw">type:</span> <span class="st">Utilization</span>
+          <span class="kw">averageUtilization:</span> <span class="st">70</span>
+    - <span class="kw">type:</span> <span class="st">Resource</span>
+      <span class="kw">resource:</span>
+        <span class="kw">name:</span> <span class="st">memory</span>
+        <span class="kw">target:</span>
+          <span class="kw">type:</span> <span class="st">Utilization</span>
+          <span class="kw">averageUtilization:</span> <span class="st">80</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с HPA через kubectl</div>
+                    <pre><code><span class="cm"># Создать HPA императивно</span>
+<span class="fn">kubectl</span> <span class="st">autoscale</span> deploy/my-app <span class="fl">--min=2</span> <span class="fl">--max=10</span> <span class="fl">--cpu-percent=70</span>
+
+<span class="cm"># Проверить состояние HPA</span>
+<span class="fn">kubectl</span> <span class="st">get</span> hpa
+<span class="cm"># NAME         REFERENCE           TARGETS   MINPODS   MAXPODS   REPLICAS</span>
+<span class="cm"># my-app-hpa   Deployment/my-app   45%/70%   2         10        3</span>
+
+<span class="cm"># Подробная информация</span>
+<span class="fn">kubectl</span> <span class="st">describe</span> hpa my-app-hpa</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> HPA не будет работать без metrics-server. Установите его командой: <code>kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml</code>. Также HPA требует, чтобы у контейнеров были заданы resource requests &mdash; без них невозможно рассчитать утилизацию.
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы пройдём через полный цикл работы с Kubernetes: установим локальный кластер, развернём приложение с тремя репликами, создадим Service и Ingress, настроим ConfigMap и выполним rolling update. Все команды рассчитаны на работу с minikube на локальной машине.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 -- Установка minikube и запуск кластера</div>
+                    <p>Minikube &mdash; это инструмент для запуска локального кластера Kubernetes на вашей машине. Он идеально подходит для обучения и разработки. Minikube создаёт виртуальную машину (или контейнер) с полноценным однонодовым кластером Kubernetes.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Установка minikube (Linux)</span>
+<span class="fn">curl</span> <span class="fl">-LO</span> https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+<span class="fn">sudo</span> <span class="fn">install</span> minikube-linux-amd64 /usr/local/bin/minikube
+
+<span class="cm"># Установка kubectl</span>
+<span class="fn">curl</span> <span class="fl">-LO</span> <span class="st">"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"</span>
+<span class="fn">sudo</span> <span class="fn">install</span> kubectl /usr/local/bin/kubectl
+
+<span class="cm"># Запуск кластера</span>
+<span class="fn">minikube</span> <span class="st">start</span> <span class="fl">--driver=docker</span>
+
+<span class="cm"># Проверка</span>
+<span class="fn">kubectl</span> <span class="st">cluster-info</span>
+<span class="fn">kubectl</span> <span class="st">get</span> nodes
+<span class="cm"># NAME       STATUS   ROLES           AGE   VERSION</span>
+<span class="cm"># minikube   Ready    control-plane   30s   v1.28.3</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 -- Создание Deployment с тремя репликами</div>
+                    <p>Создадим Deployment для nginx-приложения с тремя репликами. Kubernetes автоматически распределит поды и будет поддерживать указанное количество.</p>
+                    <div class="code-block">
+                        <div class="code-header">webapp-deployment.yaml</div>
+                        <pre><code><span class="kw">apiVersion:</span> <span class="st">apps/v1</span>
+<span class="kw">kind:</span> <span class="st">Deployment</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">webapp</span>
+<span class="kw">spec:</span>
+  <span class="kw">replicas:</span> <span class="st">3</span>
+  <span class="kw">selector:</span>
+    <span class="kw">matchLabels:</span>
+      <span class="kw">app:</span> <span class="st">webapp</span>
+  <span class="kw">template:</span>
+    <span class="kw">metadata:</span>
+      <span class="kw">labels:</span>
+        <span class="kw">app:</span> <span class="st">webapp</span>
+    <span class="kw">spec:</span>
+      <span class="kw">containers:</span>
+        - <span class="kw">name:</span> <span class="st">nginx</span>
+          <span class="kw">image:</span> <span class="st">nginx:1.25</span>
+          <span class="kw">ports:</span>
+            - <span class="kw">containerPort:</span> <span class="st">80</span>
+          <span class="kw">resources:</span>
+            <span class="kw">requests:</span>
+              <span class="kw">cpu:</span> <span class="st">"50m"</span>
+              <span class="kw">memory:</span> <span class="st">"64Mi"</span>
+            <span class="kw">limits:</span>
+              <span class="kw">cpu:</span> <span class="st">"100m"</span>
+              <span class="kw">memory:</span> <span class="st">"128Mi"</span>
+          <span class="kw">volumeMounts:</span>
+            - <span class="kw">name:</span> <span class="st">config-volume</span>
+              <span class="kw">mountPath:</span> <span class="st">/usr/share/nginx/html</span>
+      <span class="kw">volumes:</span>
+        - <span class="kw">name:</span> <span class="st">config-volume</span>
+          <span class="kw">configMap:</span>
+            <span class="kw">name:</span> <span class="st">webapp-content</span></code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="fn">kubectl</span> <span class="st">apply</span> <span class="fl">-f</span> webapp-deployment.yaml
+<span class="fn">kubectl</span> <span class="st">get</span> pods <span class="fl">-l</span> app=webapp
+<span class="cm"># NAME                      READY   STATUS    RESTARTS   AGE</span>
+<span class="cm"># webapp-6d8f7b4b5-abc12   1/1     Running   0          10s</span>
+<span class="cm"># webapp-6d8f7b4b5-def34   1/1     Running   0          10s</span>
+<span class="cm"># webapp-6d8f7b4b5-ghi56   1/1     Running   0          10s</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 -- Создание ConfigMap с контентом</div>
+                    <p>Создадим ConfigMap, содержащий HTML-страницу, которую nginx будет отдавать. Это демонстрирует, как передавать конфигурацию и файлы в контейнеры без пересборки образа.</p>
+                    <div class="code-block">
+                        <div class="code-header">webapp-configmap.yaml</div>
+                        <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">ConfigMap</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">webapp-content</span>
+<span class="kw">data:</span>
+  <span class="kw">index.html:</span> <span class="st">|</span>
+    &lt;!DOCTYPE html&gt;
+    &lt;html&gt;
+    &lt;body&gt;
+      &lt;h1&gt;Hello from Kubernetes! Version 1.0&lt;/h1&gt;
+      &lt;p&gt;Pod: served by nginx&lt;/p&gt;
+    &lt;/body&gt;
+    &lt;/html&gt;</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Применяем ConfigMap (должен существовать до Deployment)</span>
+<span class="fn">kubectl</span> <span class="st">apply</span> <span class="fl">-f</span> webapp-configmap.yaml
+
+<span class="cm"># Перезапускаем поды, чтобы подхватить ConfigMap</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> restart deploy/webapp</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 -- Создание Service и Ingress</div>
+                    <p>Создадим Service для доступа к подам и Ingress для маршрутизации внешнего HTTP-трафика. В minikube для работы Ingress необходимо включить соответствующий аддон.</p>
+                    <div class="code-block">
+                        <div class="code-header">webapp-service.yaml</div>
+                        <pre><code><span class="kw">apiVersion:</span> <span class="st">v1</span>
+<span class="kw">kind:</span> <span class="st">Service</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">webapp-svc</span>
+<span class="kw">spec:</span>
+  <span class="kw">selector:</span>
+    <span class="kw">app:</span> <span class="st">webapp</span>
+  <span class="kw">ports:</span>
+    - <span class="kw">port:</span> <span class="st">80</span>
+      <span class="kw">targetPort:</span> <span class="st">80</span>
+<span class="cm">---</span>
+<span class="kw">apiVersion:</span> <span class="st">networking.k8s.io/v1</span>
+<span class="kw">kind:</span> <span class="st">Ingress</span>
+<span class="kw">metadata:</span>
+  <span class="kw">name:</span> <span class="st">webapp-ingress</span>
+<span class="kw">spec:</span>
+  <span class="kw">ingressClassName:</span> <span class="st">nginx</span>
+  <span class="kw">rules:</span>
+    - <span class="kw">host:</span> <span class="st">webapp.local</span>
+      <span class="kw">http:</span>
+        <span class="kw">paths:</span>
+          - <span class="kw">path:</span> <span class="st">/</span>
+            <span class="kw">pathType:</span> <span class="st">Prefix</span>
+            <span class="kw">backend:</span>
+              <span class="kw">service:</span>
+                <span class="kw">name:</span> <span class="st">webapp-svc</span>
+                <span class="kw">port:</span>
+                  <span class="kw">number:</span> <span class="st">80</span></code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Включаем Ingress в minikube</span>
+<span class="fn">minikube</span> <span class="st">addons</span> enable ingress
+
+<span class="cm"># Применяем манифесты</span>
+<span class="fn">kubectl</span> <span class="st">apply</span> <span class="fl">-f</span> webapp-service.yaml
+
+<span class="cm"># Проверяем</span>
+<span class="fn">kubectl</span> <span class="st">get</span> svc,ingress
+<span class="cm"># Добавляем запись в /etc/hosts</span>
+<span class="fn">echo</span> <span class="st">"$(minikube ip) webapp.local"</span> | <span class="fn">sudo</span> <span class="fn">tee</span> <span class="fl">-a</span> /etc/hosts
+
+<span class="cm"># Проверяем доступ</span>
+<span class="fn">curl</span> <span class="st">http://webapp.local</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 -- Rolling update</div>
+                    <p>Выполним обновление приложения: изменим содержимое ConfigMap (имитируя новую версию) и обновим образ. Kubernetes выполнит rolling update &mdash; постепенно заменит старые поды новыми без простоя.</p>
+                    <div class="code-block">
+                        <div class="code-header">bash</div>
+                        <pre><code><span class="cm"># Обновляем образ nginx до версии 1.26</span>
+<span class="fn">kubectl</span> <span class="st">set</span> image deploy/webapp nginx=nginx:1.26
+
+<span class="cm"># Наблюдаем за процессом обновления</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> status deploy/webapp
+<span class="cm"># Waiting for deployment "webapp" rollout to finish: 1 out of 3 new replicas have been updated...</span>
+<span class="cm"># Waiting for deployment "webapp" rollout to finish: 2 out of 3 new replicas have been updated...</span>
+<span class="cm"># deployment "webapp" successfully rolled out</span>
+
+<span class="cm"># Проверяем версию</span>
+<span class="fn">kubectl</span> <span class="st">describe</span> deploy/webapp | <span class="fn">grep</span> Image
+<span class="cm"># Image: nginx:1.26</span>
+
+<span class="cm"># Просматриваем историю</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> history deploy/webapp
+
+<span class="cm"># Если что-то пошло не так — откатываемся</span>
+<span class="fn">kubectl</span> <span class="st">rollout</span> undo deploy/webapp
+<span class="fn">kubectl</span> <span class="st">rollout</span> status deploy/webapp
+<span class="cm"># deployment "webapp" successfully rolled out</span></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li><strong>Развёртывание stateful-приложения:</strong> разверните PostgreSQL в Kubernetes с помощью StatefulSet. Создайте PersistentVolumeClaim для хранения данных, Secret для пароля, Service типа ClusterIP. Подключитесь к базе через <code>kubectl exec</code> и создайте тестовую таблицу. Удалите под и убедитесь, что данные сохранились после пересоздания.</li>
+                    <li><strong>Ingress с несколькими сервисами:</strong> разверните два приложения (например, nginx и httpd) с отдельными Deployment и Service. Настройте Ingress с маршрутизацией по пути: <code>/app1</code> направляет к первому сервису, <code>/app2</code> &mdash; ко второму. Проверьте работоспособность через <code>curl</code>.</li>
+                    <li><strong>Автоскейлинг:</strong> разверните приложение с resource requests, установите metrics-server, создайте HPA с порогом CPU 50%. Создайте нагрузку с помощью <code>kubectl run load-gen --image=busybox -- /bin/sh -c "while true; do wget -q -O- http://my-app-svc; done"</code> и наблюдайте, как HPA увеличивает количество реплик.</li>
+                    <li><strong>Helm chart:</strong> создайте собственный Helm chart для простого веб-приложения. Chart должен включать Deployment, Service, ConfigMap и Ingress. Параметризуйте количество реплик, образ, порт и имя хоста для Ingress через <code>values.yaml</code>. Установите chart в два разных namespace с разными значениями.</li>
+                    <li><strong>CronJob для бэкапов:</strong> создайте CronJob, который каждые 5 минут выполняет команду, записывающую текущую дату и список подов в файл внутри PersistentVolume. Настройте <code>successfulJobsHistoryLimit</code> и <code>failedJobsHistoryLimit</code>. Проверьте логи завершённых Job.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Полезные ресурсы</h3>
+                <ul>
+                    <li>
+                        <a href="https://kubernetes.io/docs/home/" target="_blank">Kubernetes Documentation</a>
+                        <div class="res-desc">Официальная документация Kubernetes &mdash; исчерпывающий справочник по всем объектам, API и best practices</div>
+                    </li>
+                    <li>
+                        <a href="https://killercoda.com/playgrounds/scenario/kubernetes" target="_blank">Killercoda &mdash; Kubernetes Playground</a>
+                        <div class="res-desc">Бесплатная интерактивная среда для практики Kubernetes прямо в браузере, без локальной установки</div>
+                    </li>
+                    <li>
+                        <a href="https://helm.sh/docs/" target="_blank">Helm Documentation</a>
+                        <div class="res-desc">Официальная документация Helm &mdash; установка, создание чартов, управление релизами и лучшие практики</div>
+                    </li>
+                    <li>
+                        <a href="https://kubernetes.io/docs/tutorials/kubernetes-basics/" target="_blank">Kubernetes Basics Tutorial</a>
+                        <div class="res-desc">Пошаговый интерактивный туториал от создателей Kubernetes для начинающих</div>
+                    </li>
+                    <li>
+                        <a href="https://learnk8s.io/" target="_blank">Learnk8s</a>
+                        <div class="res-desc">Качественные статьи и визуальные руководства по архитектуре, сетям и масштабированию Kubernetes</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== ОТМЕТКА ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="kubernetes">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== НАВИГАЦИЯ ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="terraform.html" class="nav-title">&larr; Terraform</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="cloud.html" class="nav-title">Облачные платформы &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

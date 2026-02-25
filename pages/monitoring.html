@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мониторинг — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Мониторинг</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Мониторинг и логирование</h1>
+            <p class="subtitle">Нельзя управлять тем, что не измеряешь</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Зачем нужен мониторинг</h2>
+
+                <p>Мониторинг &mdash; это фундамент надёжной эксплуатации любой IT-инфраструктуры. Без мониторинга команда узнаёт о проблемах от пользователей, а не от систем оповещения, что приводит к долгим простоям и потере доверия. В современном DevOps-подходе мониторинг &mdash; это не опциональная «надстройка», а обязательная часть каждого сервиса, которая закладывается ещё на этапе проектирования. Проактивный мониторинг позволяет выявлять деградацию производительности и потенциальные сбои до того, как они повлияют на пользователей, в отличие от реактивного подхода, когда команда реагирует на уже произошедшие инциденты.</p>
+
+                <p>Современная концепция <strong>наблюдаемости (observability)</strong> опирается на три столпа: <strong>метрики</strong> &mdash; числовые показатели, отражающие состояние системы во времени (использование CPU, количество запросов, латентность); <strong>логи</strong> &mdash; текстовые записи о событиях в системе, позволяющие восстановить хронологию происходящего; <strong>трейсы</strong> &mdash; цепочки вызовов, позволяющие проследить путь запроса через распределённую систему. Каждый столп отвечает на свой вопрос: метрики говорят «что произошло», логи объясняют «почему», а трейсы показывают «где именно». Полная наблюдаемость достигается только при комбинации всех трёх.</p>
+
+                <p>Для формализации требований к надёжности используются три взаимосвязанных понятия. <strong>SLA (Service Level Agreement)</strong> &mdash; юридическое соглашение с клиентом об уровне доступности сервиса (например, 99.9% uptime, что допускает не более 8.76 часов простоя в год). <strong>SLO (Service Level Objective)</strong> &mdash; внутренняя цель команды, обычно строже SLA (например, 99.95%). <strong>SLI (Service Level Indicator)</strong> &mdash; конкретная метрика, по которой измеряется соответствие SLO (например, доля успешных HTTP-ответов за 5 минут). Google в своей практике SRE (Site Reliability Engineering) выделяет <strong>четыре золотых сигнала</strong>: <strong>Latency</strong> &mdash; время обработки запроса; <strong>Traffic</strong> &mdash; объём нагрузки на систему; <strong>Errors</strong> &mdash; доля неуспешных запросов; <strong>Saturation</strong> &mdash; степень загруженности ресурсов. Мониторинг именно этих четырёх показателей покрывает большинство критических сценариев для любого сервиса.</p>
+            </div>
+
+            <!-- ===== PROMETHEUS ===== -->
+            <div class="section">
+                <div class="section-label">Сбор метрик</div>
+                <h2>Prometheus</h2>
+
+                <p><strong>Prometheus</strong> &mdash; это open-source система мониторинга и оповещения, созданная в SoundCloud и ставшая вторым проектом (после Kubernetes), принятым в Cloud Native Computing Foundation (CNCF). Prometheus использует <strong>pull-модель</strong> сбора метрик: сервер Prometheus сам периодически обращается к целевым сервисам (targets) по HTTP и забирает метрики в формате текстового протокола. Это принципиально отличается от push-модели (как в Graphite или InfluxDB), где приложения сами отправляют метрики на сервер. Pull-модель упрощает обнаружение проблем: если Prometheus не может получить метрики &mdash; значит, сервис недоступен.</p>
+
+                <p>Архитектура Prometheus включает несколько компонентов. <strong>Prometheus Server</strong> &mdash; ядро системы, отвечающее за scraping (сбор метрик), хранение в локальной time-series database (TSDB) и выполнение запросов PromQL. <strong>Exporters</strong> &mdash; агенты, которые собирают метрики из различных систем и предоставляют их в формате Prometheus. Самые популярные: <code>node_exporter</code> (метрики ОС: CPU, RAM, диск, сеть), <code>blackbox_exporter</code> (проверка доступности endpoints через HTTP, TCP, ICMP), <code>mysqld_exporter</code>, <code>postgres_exporter</code> и другие. <strong>Pushgateway</strong> &mdash; промежуточный компонент для short-lived jobs, которые не могут ждать scraping. <strong>Alertmanager</strong> &mdash; обрабатывает и маршрутизирует алерты. <strong>Service Discovery</strong> &mdash; автоматическое обнаружение targets через Kubernetes, Consul, DNS, файлы и другие механизмы.</p>
+
+                <p>Модель данных Prometheus основана на <strong>time series</strong> &mdash; временных рядах. Каждый ряд идентифицируется именем метрики и набором меток (labels): <code>http_requests_total{method="GET", handler="/api/users", status="200"}</code>. Метки делают Prometheus невероятно гибким: одна метрика может описывать тысячи различных измерений. Prometheus поддерживает четыре типа метрик: <strong>Counter</strong> &mdash; монотонно растущий счётчик (количество запросов, ошибок); <strong>Gauge</strong> &mdash; значение, которое может увеличиваться и уменьшаться (температура, использование памяти); <strong>Histogram</strong> &mdash; распределение значений по корзинам (bucket), идеально для измерения латентности; <strong>Summary</strong> &mdash; похож на Histogram, но рассчитывает квантили на стороне клиента.</p>
+
+                <div class="code-block">
+                    <div class="code-header">prometheus.yml &mdash; базовая конфигурация</div>
+                    <pre><code><span class="kw">global:</span>
+  <span class="kw">scrape_interval:</span> <span class="fl">15s</span>          <span class="cm"># как часто собирать метрики</span>
+  <span class="kw">evaluation_interval:</span> <span class="fl">15s</span>      <span class="cm"># как часто вычислять правила</span>
+  <span class="kw">scrape_timeout:</span> <span class="fl">10s</span>           <span class="cm"># таймаут на scraping</span>
+
+<span class="cm"># Подключение файлов с правилами алертинга</span>
+<span class="kw">rule_files:</span>
+  - <span class="st">"rules/*.yml"</span>
+
+<span class="cm"># Конфигурация Alertmanager</span>
+<span class="kw">alerting:</span>
+  <span class="kw">alertmanagers:</span>
+    - <span class="kw">static_configs:</span>
+        - <span class="kw">targets:</span>
+            - <span class="st">"alertmanager:9093"</span>
+
+<span class="cm"># Targets для сбора метрик</span>
+<span class="kw">scrape_configs:</span>
+  <span class="cm"># Мониторинг самого Prometheus</span>
+  - <span class="kw">job_name:</span> <span class="st">"prometheus"</span>
+    <span class="kw">static_configs:</span>
+      - <span class="kw">targets:</span> [<span class="st">"localhost:9090"</span>]
+
+  <span class="cm"># Метрики хостовой ОС через node_exporter</span>
+  - <span class="kw">job_name:</span> <span class="st">"node"</span>
+    <span class="kw">static_configs:</span>
+      - <span class="kw">targets:</span>
+          - <span class="st">"node-exporter:9100"</span>
+          - <span class="st">"10.0.1.10:9100"</span>
+          - <span class="st">"10.0.1.11:9100"</span>
+        <span class="kw">labels:</span>
+          <span class="kw">env:</span> <span class="st">"production"</span>
+
+  <span class="cm"># Проверка доступности сайтов</span>
+  - <span class="kw">job_name:</span> <span class="st">"blackbox"</span>
+    <span class="kw">metrics_path:</span> <span class="st">/probe</span>
+    <span class="kw">params:</span>
+      <span class="kw">module:</span> [<span class="st">http_2xx</span>]
+    <span class="kw">static_configs:</span>
+      - <span class="kw">targets:</span>
+          - <span class="st">"https://example.com"</span>
+          - <span class="st">"https://api.example.com"</span>
+    <span class="kw">relabel_configs:</span>
+      - <span class="kw">source_labels:</span> [<span class="st">__address__</span>]
+        <span class="kw">target_label:</span> <span class="st">__param_target</span>
+      - <span class="kw">source_labels:</span> [<span class="st">__param_target</span>]
+        <span class="kw">target_label:</span> <span class="st">instance</span>
+      - <span class="kw">target_label:</span> <span class="st">__address__</span>
+        <span class="kw">replacement:</span> <span class="st">"blackbox-exporter:9115"</span>
+
+  <span class="cm"># Автообнаружение подов в Kubernetes</span>
+  - <span class="kw">job_name:</span> <span class="st">"kubernetes-pods"</span>
+    <span class="kw">kubernetes_sd_configs:</span>
+      - <span class="kw">role:</span> <span class="st">pod</span>
+    <span class="kw">relabel_configs:</span>
+      - <span class="kw">source_labels:</span> [<span class="st">__meta_kubernetes_pod_annotation_prometheus_io_scrape</span>]
+        <span class="kw">action:</span> <span class="st">keep</span>
+        <span class="kw">regex:</span> <span class="st">true</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Pull vs Push:</strong> pull-модель проще в эксплуатации &mdash; Prometheus сам знает, какие targets должны отвечать, и может сразу обнаружить их недоступность. Для краткосрочных задач (batch jobs, cron) используйте Pushgateway, но не злоупотребляйте им &mdash; это антипаттерн для долгоживущих сервисов.
+                </div>
+            </div>
+
+            <!-- ===== PROMQL ===== -->
+            <div class="section">
+                <h2>PromQL</h2>
+
+                <p><strong>PromQL (Prometheus Query Language)</strong> &mdash; функциональный язык запросов для работы с временными рядами в Prometheus. PromQL позволяет выбирать, агрегировать, фильтровать и трансформировать метрики для построения графиков, создания алертов и вычисления производных показателей. Понимание PromQL &mdash; ключевой навык для эффективной работы с Prometheus и Grafana. Запросы PromQL используются в трёх контекстах: в веб-интерфейсе Prometheus для ad-hoc анализа, в Grafana для построения панелей и в правилах алертинга.</p>
+
+                <p>Базовые элементы PromQL включают <strong>селекторы</strong> &mdash; выбор метрик по имени и меткам. Фигурные скобки задают фильтры по меткам: <code>=</code> &mdash; точное совпадение, <code>!=</code> &mdash; исключение, <code>=~</code> &mdash; совпадение с регулярным выражением, <code>!~</code> &mdash; исключение по регулярному выражению. PromQL различает два типа данных: <strong>instant vector</strong> &mdash; набор значений на конкретный момент времени, и <strong>range vector</strong> &mdash; набор значений за период (указывается в квадратных скобках: <code>[5m]</code>, <code>[1h]</code>). Функции <code>rate()</code> и <code>increase()</code> принимают range vector и возвращают instant vector, что важно учитывать при построении запросов.</p>
+
+                <p>Ключевые функции PromQL: <code>rate(counter[interval])</code> &mdash; скорость роста счётчика в секунду (обязательна для Counter-метрик); <code>increase(counter[interval])</code> &mdash; абсолютный прирост за период; <code>sum()</code>, <code>avg()</code>, <code>min()</code>, <code>max()</code> &mdash; агрегатные операторы; <code>by(label)</code> &mdash; группировка по метке; <code>without(label)</code> &mdash; агрегация с исключением метки; <code>histogram_quantile(quantile, histogram)</code> &mdash; вычисление перцентилей из гистограмм. Оператор <code>offset</code> позволяет обращаться к историческим данным: <code>metric offset 1h</code> &mdash; значение час назад.</p>
+
+                <div class="code-block">
+                    <div class="code-header">PromQL &mdash; базовые селекторы</div>
+                    <pre><code><span class="cm"># Instant vector &mdash; текущие значения метрики</span>
+<span class="fn">node_cpu_seconds_total</span>
+
+<span class="cm"># Фильтрация по меткам</span>
+<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}
+
+<span class="cm"># Регулярное выражение в метках</span>
+<span class="fn">http_requests_total</span>{<span class="kw">status</span>=~<span class="st">"5.."</span>}
+
+<span class="cm"># Исключение значений</span>
+<span class="fn">http_requests_total</span>{<span class="kw">method</span>!=<span class="st">"OPTIONS"</span>}
+
+<span class="cm"># Range vector &mdash; значения за последние 5 минут</span>
+<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>]</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">PromQL &mdash; практические запросы</div>
+                    <pre><code><span class="cm"># === CPU ===</span>
+<span class="cm"># Процент использования CPU (среднее по всем ядрам)</span>
+<span class="fl">100</span> - (<span class="fn">avg</span> <span class="kw">by</span> (<span class="st">instance</span>) (
+  <span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>])
+) * <span class="fl">100</span>)
+
+<span class="cm"># Использование CPU по ядрам</span>
+<span class="fl">100</span> - (<span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>]) * <span class="fl">100</span>)
+
+<span class="cm"># === Память ===</span>
+<span class="cm"># Процент использования оперативной памяти</span>
+(<span class="fl">1</span> - <span class="fn">node_memory_MemAvailable_bytes</span> / <span class="fn">node_memory_MemTotal_bytes</span>) * <span class="fl">100</span>
+
+<span class="cm"># Доступная память в гигабайтах</span>
+<span class="fn">node_memory_MemAvailable_bytes</span> / <span class="fl">1024</span> / <span class="fl">1024</span> / <span class="fl">1024</span>
+
+<span class="cm"># === Диск ===</span>
+<span class="cm"># Процент использования диска</span>
+(<span class="fl">1</span> - <span class="fn">node_filesystem_avail_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}
+  / <span class="fn">node_filesystem_size_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}) * <span class="fl">100</span>
+
+<span class="cm"># Прогноз заполнения диска за 24 часа (линейная экстраполяция)</span>
+<span class="fn">predict_linear</span>(<span class="fn">node_filesystem_avail_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}[<span class="fl">6h</span>], <span class="fl">24</span>*<span class="fl">60</span>*<span class="fl">60</span>) &lt; <span class="fl">0</span>
+
+<span class="cm"># === HTTP-запросы ===</span>
+<span class="cm"># Общий RPS (requests per second)</span>
+<span class="fn">sum</span>(<span class="fn">rate</span>(<span class="fn">http_requests_total</span>[<span class="fl">5m</span>]))
+
+<span class="cm"># RPS по эндпоинтам</span>
+<span class="fn">sum</span> <span class="kw">by</span> (<span class="st">handler</span>) (<span class="fn">rate</span>(<span class="fn">http_requests_total</span>[<span class="fl">5m</span>]))
+
+<span class="cm"># Процент ошибок (5xx)</span>
+<span class="fn">sum</span>(<span class="fn">rate</span>(<span class="fn">http_requests_total</span>{<span class="kw">status</span>=~<span class="st">"5.."</span>}[<span class="fl">5m</span>]))
+  / <span class="fn">sum</span>(<span class="fn">rate</span>(<span class="fn">http_requests_total</span>[<span class="fl">5m</span>])) * <span class="fl">100</span>
+
+<span class="cm"># === Латентность ===</span>
+<span class="cm"># 95-й перцентиль времени ответа</span>
+<span class="fn">histogram_quantile</span>(<span class="fl">0.95</span>,
+  <span class="fn">sum</span> <span class="kw">by</span> (<span class="st">le</span>) (<span class="fn">rate</span>(<span class="fn">http_request_duration_seconds_bucket</span>[<span class="fl">5m</span>]))
+)
+
+<span class="cm"># 99-й перцентиль по эндпоинтам</span>
+<span class="fn">histogram_quantile</span>(<span class="fl">0.99</span>,
+  <span class="fn">sum</span> <span class="kw">by</span> (<span class="st">le</span>, <span class="st">handler</span>) (
+    <span class="fn">rate</span>(<span class="fn">http_request_duration_seconds_bucket</span>[<span class="fl">5m</span>])
+  )
+)
+
+<span class="cm"># === Сеть ===</span>
+<span class="cm"># Входящий трафик в мегабитах в секунду</span>
+<span class="fn">rate</span>(<span class="fn">node_network_receive_bytes_total</span>{<span class="kw">device</span>=<span class="st">"eth0"</span>}[<span class="fl">5m</span>]) * <span class="fl">8</span> / <span class="fl">1024</span> / <span class="fl">1024</span>
+
+<span class="cm"># Количество открытых TCP-соединений</span>
+<span class="fn">node_netstat_Tcp_CurrEstab</span></code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Важно:</strong> никогда не используйте <code>rate()</code> с интервалом меньше <code>scrape_interval</code>. Для <code>scrape_interval: 15s</code> минимальный разумный интервал в <code>rate()</code> &mdash; <code>[1m]</code>, а рекомендуемый &mdash; <code>[5m]</code>. Слишком маленький интервал приводит к шумным графикам и ложным алертам.
+                </div>
+            </div>
+
+            <!-- ===== GRAFANA ===== -->
+            <div class="section">
+                <div class="section-label">Визуализация</div>
+                <h2>Grafana</h2>
+
+                <p><strong>Grafana</strong> &mdash; это ведущая open-source платформа для визуализации метрик и аналитики. Grafana не хранит данные сама по себе &mdash; она подключается к различным <strong>источникам данных (data sources)</strong>: Prometheus, Elasticsearch, InfluxDB, PostgreSQL, CloudWatch, Loki и десяткам других. Это делает Grafana универсальным инструментом: вы можете объединить метрики из разных систем на одном дашборде, сопоставляя данные инфраструктуры, приложений и бизнес-метрик. Grafana работает через веб-интерфейс и доступна по умолчанию на порту 3000.</p>
+
+                <p>Основная единица визуализации в Grafana &mdash; <strong>дашборд (dashboard)</strong>, состоящий из <strong>панелей (panels)</strong>. Каждая панель отображает одну или несколько метрик в выбранном формате: линейный график (time series), столбчатая диаграмма, gauge, stat, table, heatmap и другие. Панели поддерживают <strong>переменные (variables)</strong> &mdash; динамические параметры, которые позволяют фильтровать данные без редактирования запросов. Например, переменная <code>$instance</code> с автоподстановкой из Prometheus даёт возможность переключаться между серверами одним кликом. Переменные задаются в настройках дашборда и используются в запросах PromQL как <code>$variable_name</code>.</p>
+
+                <p>Grafana предлагает богатую экосистему <strong>готовых дашбордов</strong> на <a href="https://grafana.com/grafana/dashboards/" target="_blank">grafana.com/dashboards</a>. Каждый дашборд имеет уникальный ID, который можно использовать для импорта: например, дашборд <strong>1860</strong> &mdash; «Node Exporter Full» для детальных метрик ОС, <strong>3662</strong> &mdash; «Prometheus 2.0 Overview». Импорт занимает секунды: Dashboards &rarr; Import &rarr; ввести ID. Помимо визуализации, Grafana поддерживает <strong>алертинг</strong>: можно настроить уведомления прямо из панели, задав условия срабатывания и каналы доставки (email, Slack, Telegram, PagerDuty). Однако для сложных сценариев алертинга рекомендуется использовать Alertmanager.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Создание дашборда в Grafana &mdash; пошагово</div>
+                    <pre><code><span class="cm"># 1. Добавить Data Source</span>
+<span class="cm">#    Configuration → Data Sources → Add data source</span>
+<span class="cm">#    Выбрать Prometheus</span>
+<span class="cm">#    URL: http://prometheus:9090</span>
+<span class="cm">#    Нажать "Save & Test"</span>
+
+<span class="cm"># 2. Создать дашборд</span>
+<span class="cm">#    Dashboards → New Dashboard → Add visualization</span>
+
+<span class="cm"># 3. Настроить панель CPU Usage</span>
+<span class="cm">#    Data source: Prometheus</span>
+<span class="cm">#    Запрос (PromQL):</span>
+<span class="fl">100</span> - (<span class="fn">avg</span> <span class="kw">by</span> (<span class="st">instance</span>) (
+  <span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>])
+) * <span class="fl">100</span>)
+
+<span class="cm"># 4. Добавить переменную</span>
+<span class="cm">#    Dashboard Settings → Variables → New variable</span>
+<span class="cm">#    Name: instance</span>
+<span class="cm">#    Type: Query</span>
+<span class="cm">#    Data source: Prometheus</span>
+<span class="cm">#    Query: label_values(node_cpu_seconds_total, instance)</span>
+
+<span class="cm"># 5. Использовать переменную в запросах</span>
+<span class="fn">node_memory_MemAvailable_bytes</span>{<span class="kw">instance</span>=<span class="st">"$instance"</span>}
+
+<span class="cm"># 6. Импортировать готовый дашборд</span>
+<span class="cm">#    Dashboards → Import → ID: 1860</span>
+<span class="cm">#    Выбрать Prometheus как data source</span>
+<span class="cm">#    Нажать "Import"</span></code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID дашборда</th>
+                                <th>Название</th>
+                                <th>Назначение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>1860</code></td>
+                                <td>Node Exporter Full</td>
+                                <td>Детальные метрики ОС: CPU, RAM, диск, сеть</td>
+                            </tr>
+                            <tr>
+                                <td><code>3662</code></td>
+                                <td>Prometheus 2.0 Overview</td>
+                                <td>Мониторинг самого Prometheus</td>
+                            </tr>
+                            <tr>
+                                <td><code>12740</code></td>
+                                <td>Kubernetes Monitoring</td>
+                                <td>Обзор кластера Kubernetes</td>
+                            </tr>
+                            <tr>
+                                <td><code>9628</code></td>
+                                <td>PostgreSQL Database</td>
+                                <td>Метрики PostgreSQL</td>
+                            </tr>
+                            <tr>
+                                <td><code>7362</code></td>
+                                <td>MySQL Overview</td>
+                                <td>Метрики MySQL</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== АЛЕРТИНГ ===== -->
+            <div class="section">
+                <div class="section-label">Оповещения</div>
+                <h2>Алертинг</h2>
+
+                <p><strong>Alertmanager</strong> &mdash; компонент экосистемы Prometheus, отвечающий за обработку и маршрутизацию алертов. Процесс алертинга состоит из двух этапов: Prometheus вычисляет <strong>alerting rules</strong> &mdash; правила, описывающие аномальные состояния, и при их срабатывании отправляет алерты в Alertmanager. Alertmanager, в свою очередь, выполняет <strong>группировку</strong> (объединяет связанные алерты в одно уведомление), <strong>подавление (inhibition)</strong> (если сработал критический алерт, warning-алерты по тому же инциденту замалчиваются), <strong>silencing</strong> (временное подавление алертов во время плановых работ) и <strong>маршрутизацию</strong> (отправку алертов в нужный канал).</p>
+
+                <p>Prometheus поддерживает два типа правил: <strong>recording rules</strong> и <strong>alerting rules</strong>. Recording rules предвычисляют сложные или часто используемые запросы и сохраняют результат как новую метрику &mdash; это ускоряет работу дашбордов и алертов. Alerting rules определяют условия, при которых генерируется алерт. Ключевой параметр &mdash; <code>for</code>: он задаёт, как долго условие должно выполняться, прежде чем алерт перейдёт из состояния <code>pending</code> в <code>firing</code>. Это защищает от ложных срабатываний из-за кратковременных всплесков. Без <code>for</code> каждый единичный скачок CPU будет генерировать алерт.</p>
+
+                <p>Alertmanager поддерживает множество каналов доставки (<strong>receivers</strong>): email, Slack, Telegram, PagerDuty, OpsGenie, Webhook и другие. Маршрутизация настраивается через дерево <code>route</code>: алерты проходят через дерево, и первый совпавший маршрут определяет, какой receiver получит уведомление. Группировка по <code>group_by</code> объединяет алерты с одинаковыми метками в одно уведомление: например, <code>group_by: [alertname, cluster]</code> объединит все алерты одного типа в одном кластере. Параметры <code>group_wait</code>, <code>group_interval</code> и <code>repeat_interval</code> управляют таймингами: как долго ждать новых алертов для группировки, как часто отправлять обновления группы и как часто повторять неразрешённые алерты.</p>
+
+                <div class="code-block">
+                    <div class="code-header">rules/alerts.yml &mdash; правила алертинга</div>
+                    <pre><code><span class="kw">groups:</span>
+  - <span class="kw">name:</span> <span class="st">node_alerts</span>
+    <span class="kw">rules:</span>
+      <span class="cm"># Высокая загрузка CPU более 5 минут</span>
+      - <span class="kw">alert:</span> <span class="st">HighCpuUsage</span>
+        <span class="kw">expr:</span> >
+          <span class="fl">100</span> - (<span class="fn">avg</span> <span class="kw">by</span> (<span class="st">instance</span>) (
+            <span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>])
+          ) * <span class="fl">100</span>) > <span class="fl">85</span>
+        <span class="kw">for:</span> <span class="fl">5m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">warning</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Высокая загрузка CPU на {{ $labels.instance }}"</span>
+          <span class="kw">description:</span> <span class="st">"CPU загружен на {{ $value | printf \"%.1f\" }}% более 5 минут"</span>
+
+      <span class="cm"># Диск заполнен более чем на 90%</span>
+      - <span class="kw">alert:</span> <span class="st">DiskSpaceLow</span>
+        <span class="kw">expr:</span> >
+          (<span class="fl">1</span> - <span class="fn">node_filesystem_avail_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}
+            / <span class="fn">node_filesystem_size_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}) * <span class="fl">100</span> > <span class="fl">90</span>
+        <span class="kw">for:</span> <span class="fl">10m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">critical</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Мало места на диске {{ $labels.instance }}"</span>
+          <span class="kw">description:</span> <span class="st">"Диск {{ $labels.mountpoint }} заполнен на {{ $value | printf \"%.1f\" }}%"</span>
+
+      <span class="cm"># Высокое использование памяти</span>
+      - <span class="kw">alert:</span> <span class="st">HighMemoryUsage</span>
+        <span class="kw">expr:</span> >
+          (<span class="fl">1</span> - <span class="fn">node_memory_MemAvailable_bytes</span>
+            / <span class="fn">node_memory_MemTotal_bytes</span>) * <span class="fl">100</span> > <span class="fl">90</span>
+        <span class="kw">for:</span> <span class="fl">5m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">warning</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Высокое использование памяти на {{ $labels.instance }}"</span>
+          <span class="kw">description:</span> <span class="st">"Использовано {{ $value | printf \"%.1f\" }}% оперативной памяти"</span>
+
+      <span class="cm"># Сервис недоступен (target down)</span>
+      - <span class="kw">alert:</span> <span class="st">TargetDown</span>
+        <span class="kw">expr:</span> <span class="fn">up</span> == <span class="fl">0</span>
+        <span class="kw">for:</span> <span class="fl">2m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">critical</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Сервис {{ $labels.job }} недоступен"</span>
+          <span class="kw">description:</span> <span class="st">"Target {{ $labels.instance }} не отвечает более 2 минут"</span>
+
+      <span class="cm"># Высокий процент ошибок HTTP</span>
+      - <span class="kw">alert:</span> <span class="st">HighErrorRate</span>
+        <span class="kw">expr:</span> >
+          <span class="fn">sum</span>(<span class="fn">rate</span>(<span class="fn">http_requests_total</span>{<span class="kw">status</span>=~<span class="st">"5.."</span>}[<span class="fl">5m</span>]))
+            / <span class="fn">sum</span>(<span class="fn">rate</span>(<span class="fn">http_requests_total</span>[<span class="fl">5m</span>])) * <span class="fl">100</span> > <span class="fl">5</span>
+        <span class="kw">for:</span> <span class="fl">5m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">critical</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Высокий процент HTTP-ошибок"</span>
+          <span class="kw">description:</span> <span class="st">"Ошибки 5xx составляют {{ $value | printf \"%.1f\" }}% от всех запросов"</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">alertmanager.yml &mdash; конфигурация Alertmanager</div>
+                    <pre><code><span class="kw">global:</span>
+  <span class="kw">resolve_timeout:</span> <span class="fl">5m</span>
+  <span class="kw">smtp_from:</span> <span class="st">"alerts@example.com"</span>
+  <span class="kw">smtp_smarthost:</span> <span class="st">"smtp.example.com:587"</span>
+  <span class="kw">smtp_auth_username:</span> <span class="st">"alerts@example.com"</span>
+  <span class="kw">smtp_auth_password:</span> <span class="st">"password"</span>
+
+<span class="cm"># Шаблоны уведомлений</span>
+<span class="kw">templates:</span>
+  - <span class="st">"/etc/alertmanager/templates/*.tmpl"</span>
+
+<span class="cm"># Дерево маршрутизации</span>
+<span class="kw">route:</span>
+  <span class="kw">receiver:</span> <span class="st">default-email</span>
+  <span class="kw">group_by:</span> [<span class="st">alertname</span>, <span class="st">cluster</span>]
+  <span class="kw">group_wait:</span> <span class="fl">30s</span>          <span class="cm"># ждём 30 сек перед отправкой группы</span>
+  <span class="kw">group_interval:</span> <span class="fl">5m</span>      <span class="cm"># обновления группы каждые 5 минут</span>
+  <span class="kw">repeat_interval:</span> <span class="fl">4h</span>     <span class="cm"># повторять каждые 4 часа</span>
+
+  <span class="kw">routes:</span>
+    <span class="cm"># Критические алерты &mdash; в Slack и PagerDuty</span>
+    - <span class="kw">match:</span>
+        <span class="kw">severity:</span> <span class="st">critical</span>
+      <span class="kw">receiver:</span> <span class="st">critical-slack</span>
+      <span class="kw">repeat_interval:</span> <span class="fl">1h</span>
+
+    <span class="cm"># Warning-алерты &mdash; в Telegram</span>
+    - <span class="kw">match:</span>
+        <span class="kw">severity:</span> <span class="st">warning</span>
+      <span class="kw">receiver:</span> <span class="st">warning-telegram</span>
+      <span class="kw">repeat_interval:</span> <span class="fl">4h</span>
+
+<span class="cm"># Каналы доставки</span>
+<span class="kw">receivers:</span>
+  - <span class="kw">name:</span> <span class="st">default-email</span>
+    <span class="kw">email_configs:</span>
+      - <span class="kw">to:</span> <span class="st">"team@example.com"</span>
+
+  - <span class="kw">name:</span> <span class="st">critical-slack</span>
+    <span class="kw">slack_configs:</span>
+      - <span class="kw">api_url:</span> <span class="st">"https://hooks.slack.com/services/xxx/yyy/zzz"</span>
+        <span class="kw">channel:</span> <span class="st">"#alerts-critical"</span>
+        <span class="kw">title:</span> <span class="st">"{{ .GroupLabels.alertname }}"</span>
+        <span class="kw">text:</span> <span class="st">"{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}"</span>
+
+  - <span class="kw">name:</span> <span class="st">warning-telegram</span>
+    <span class="kw">telegram_configs:</span>
+      - <span class="kw">bot_token:</span> <span class="st">"123456:ABC-DEF..."</span>
+        <span class="kw">chat_id:</span> <span class="fl">-1001234567890</span>
+
+<span class="cm"># Правила подавления</span>
+<span class="kw">inhibit_rules:</span>
+  <span class="cm"># Если сервис полностью недоступен, не слать warning-алерты</span>
+  - <span class="kw">source_match:</span>
+      <span class="kw">severity:</span> <span class="st">critical</span>
+    <span class="kw">target_match:</span>
+      <span class="kw">severity:</span> <span class="st">warning</span>
+    <span class="kw">equal:</span> [<span class="st">instance</span>]</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Совет по алертингу:</strong> не создавайте алерты на каждую метрику. Хороший алерт отвечает на вопрос «нужно ли кому-то вставать в 3 часа ночи из-за этого?». Разделяйте алерты по severity: critical &mdash; требует немедленного вмешательства, warning &mdash; можно отложить до рабочего времени, info &mdash; информационный, не будит никого.
+                </div>
+            </div>
+
+            <!-- ===== ЛОГИРОВАНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Логи</div>
+                <h2>Логирование</h2>
+
+                <p>Логи &mdash; это текстовые записи о событиях, происходящих в системе. Если метрики отвечают на вопрос «что происходит прямо сейчас?», то логи позволяют ответить на вопрос «почему это произошло?». Для эффективного анализа логов критически важен формат их записи. <strong>Структурированные логи</strong> в формате JSON решают множество проблем неструктурированного текстового логирования: их легко парсить автоматически, по ним можно строить индексы для быстрого поиска, они содержат типизированные поля вместо произвольного текста. Переход от строки <code>2024-01-15 ERROR Failed to connect to database host=db01 port=5432</code> к JSON-формату <code>{"timestamp": "2024-01-15T10:30:00Z", "level": "ERROR", "message": "Failed to connect to database", "host": "db01", "port": 5432}</code> радикально улучшает возможности поиска и анализа.</p>
+
+                <p>Стандартные <strong>уровни логирования</strong> определяют серьёзность записи: <strong>DEBUG</strong> &mdash; отладочная информация, полезная только при разработке (значения переменных, трейсы вызовов); <strong>INFO</strong> &mdash; штатные события (запуск сервиса, обработка запроса, успешное подключение); <strong>WARN</strong> &mdash; потенциальные проблемы, которые не являются ошибками, но требуют внимания (высокая задержка, близость к лимиту ресурсов); <strong>ERROR</strong> &mdash; ошибки, требующие исследования (неудачное подключение, ошибка валидации); <strong>FATAL</strong> &mdash; критические ошибки, после которых приложение не может продолжать работу. Правильное использование уровней позволяет фильтровать логи: в продакшене обычно оставляют INFO и выше, а DEBUG включают только при расследовании инцидентов.</p>
+
+                <p>В распределённой системе каждый микросервис пишет логи локально, и расследование инцидента без <strong>централизованного логирования</strong> превращается в кошмар: нужно вручную подключаться к каждому серверу, искать нужные строки, пытаться сопоставить события по времени. Централизованные системы логирования (ELK, EFK, Loki) решают эту проблему: все логи стекаются в единое хранилище, где доступен полнотекстовый поиск, фильтрация, агрегация и визуализация. Два основных стека для централизованного логирования: <strong>ELK</strong> (Elasticsearch + Logstash + Kibana) &mdash; мощный, но ресурсоёмкий; <strong>EFK</strong> (Elasticsearch + Fluentd + Kibana) &mdash; Fluentd вместо Logstash, популярный в Kubernetes-среде; а также набирающий популярность <strong>Grafana Loki</strong> &mdash; лёгкая альтернатива, интегрированная с Grafana.</p>
+            </div>
+
+            <!-- ===== ELK STACK ===== -->
+            <div class="section">
+                <h2>ELK Stack</h2>
+
+                <p><strong>Elasticsearch</strong> &mdash; распределённая поисковая система и хранилище данных, построенная на базе Apache Lucene. Elasticsearch использует <strong>инвертированный индекс (inverted index)</strong> для молниеносного полнотекстового поиска: вместо того чтобы искать слово в каждом документе последовательно, система хранит маппинг «слово &rarr; список документов, в которых оно встречается». Это позволяет находить совпадения среди миллиардов строк логов за миллисекунды. Данные хранятся в <strong>индексах (indices)</strong>, которые разделены на <strong>шарды (shards)</strong> для горизонтального масштабирования. Каждый шард &mdash; это отдельный экземпляр Lucene, который может размещаться на разных узлах кластера. Реплики шардов обеспечивают отказоустойчивость.</p>
+
+                <p>Для сбора и обработки логов используются несколько инструментов. <strong>Logstash</strong> &mdash; конвейер обработки данных с богатым набором input/filter/output плагинов: он умеет парсить различные форматы логов (grok, json, csv), обогащать данные (geoip, dns lookup), трансформировать поля и отправлять результат в Elasticsearch и другие хранилища. Однако Logstash тяжеловесен &mdash; написан на JVM и потребляет значительные ресурсы. <strong>Filebeat</strong> &mdash; легковесный агент (написан на Go), который отслеживает файлы логов и отправляет их в Elasticsearch или Logstash. Он потребляет минимум ресурсов и идеален для установки на каждый сервер. <strong>Fluentd</strong> &mdash; универсальный агрегатор логов (CNCF graduated project), популярный в Kubernetes-среде. В отличие от Logstash, Fluentd использует встроенную буферизацию и маршрутизацию. Его облегчённый вариант <strong>Fluent Bit</strong> &mdash; лучший выбор для сбора логов в контейнерных окружениях.</p>
+
+                <p><strong>Kibana</strong> &mdash; веб-интерфейс для визуализации и анализа данных из Elasticsearch. Раздел <strong>Discover</strong> позволяет выполнять полнотекстовый поиск по логам, фильтровать по полям и временным диапазонам. <strong>Dashboard</strong> объединяет визуализации &mdash; графики, таблицы, метрики &mdash; в единое представление. Kibana поддерживает Kibana Query Language (KQL) для простых запросов и Lucene-синтаксис для сложных. В качестве лёгкой альтернативы всему ELK-стеку набирает популярность <strong>Grafana Loki</strong>. В отличие от Elasticsearch, Loki не индексирует содержимое логов &mdash; он индексирует только метки (labels), а сами строки хранит в сжатом виде. Это делает Loki значительно менее ресурсоёмким (в 10-100 раз меньше места на диске), но медленнее при полнотекстовом поиске. Для большинства задач DevOps-мониторинга возможностей Loki достаточно, и он идеально интегрируется с Grafana и Prometheus.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Инструмент</th>
+                                <th>Назначение</th>
+                                <th>Ресурсы</th>
+                                <th>Когда использовать</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Filebeat</code></td>
+                                <td>Сбор логов из файлов</td>
+                                <td>Минимальные (Go)</td>
+                                <td>Установка на каждый хост, отправка в Logstash/ES</td>
+                            </tr>
+                            <tr>
+                                <td><code>Logstash</code></td>
+                                <td>Обработка и трансформация</td>
+                                <td>Высокие (JVM)</td>
+                                <td>Сложный парсинг, обогащение, множество источников</td>
+                            </tr>
+                            <tr>
+                                <td><code>Fluentd</code></td>
+                                <td>Агрегация и маршрутизация</td>
+                                <td>Средние (Ruby/C)</td>
+                                <td>Kubernetes, унифицированная обработка логов</td>
+                            </tr>
+                            <tr>
+                                <td><code>Fluent Bit</code></td>
+                                <td>Лёгкий сбор логов</td>
+                                <td>Минимальные (C)</td>
+                                <td>DaemonSet в K8s, IoT, edge</td>
+                            </tr>
+                            <tr>
+                                <td><code>Loki</code></td>
+                                <td>Хранение и поиск логов</td>
+                                <td>Низкие</td>
+                                <td>Лёгкая альтернатива ELK, интеграция с Grafana</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Типичная архитектура ELK</div>
+                    <pre><code><span class="cm"># Архитектура потока логов:</span>
+<span class="cm">#</span>
+<span class="cm"># [App 1] → [Filebeat] ─┐</span>
+<span class="cm"># [App 2] → [Filebeat] ─┤</span>
+<span class="cm"># [App 3] → [Filebeat] ─┼──→ [Logstash] ──→ [Elasticsearch] ──→ [Kibana]</span>
+<span class="cm"># [App N] → [Filebeat] ─┘      (parse)        (store+index)     (visualize)</span>
+<span class="cm">#</span>
+<span class="cm"># Для Kubernetes (EFK):</span>
+<span class="cm">#</span>
+<span class="cm"># [Pod 1] ─┐</span>
+<span class="cm"># [Pod 2] ─┼──→ [Fluent Bit DaemonSet] ──→ [Fluentd] ──→ [Elasticsearch] ──→ [Kibana]</span>
+<span class="cm"># [Pod N] ─┘     (collect from /var/log)    (aggregate)   (store+index)     (visualize)</span>
+<span class="cm">#</span>
+<span class="cm"># Лёгкая альтернатива (Grafana Stack):</span>
+<span class="cm">#</span>
+<span class="cm"># [App 1] → [Promtail] ─┐</span>
+<span class="cm"># [App 2] → [Promtail] ─┼──→ [Loki] ──→ [Grafana]</span>
+<span class="cm"># [App N] → [Promtail] ─┘    (store)    (visualize)</span></code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Пример конфигурации Filebeat</div>
+                    <pre><code><span class="cm"># filebeat.yml</span>
+<span class="kw">filebeat.inputs:</span>
+  - <span class="kw">type:</span> <span class="st">filestream</span>
+    <span class="kw">id:</span> <span class="st">app-logs</span>
+    <span class="kw">paths:</span>
+      - <span class="st">/var/log/app/*.log</span>
+    <span class="kw">parsers:</span>
+      - <span class="kw">ndjson:</span>
+          <span class="kw">keys_under_root:</span> <span class="fl">true</span>
+          <span class="kw">overwrite_keys:</span> <span class="fl">true</span>
+
+  - <span class="kw">type:</span> <span class="st">filestream</span>
+    <span class="kw">id:</span> <span class="st">nginx-logs</span>
+    <span class="kw">paths:</span>
+      - <span class="st">/var/log/nginx/access.log</span>
+
+<span class="kw">output.elasticsearch:</span>
+  <span class="kw">hosts:</span> [<span class="st">"elasticsearch:9200"</span>]
+  <span class="kw">index:</span> <span class="st">"filebeat-%{+yyyy.MM.dd}"</span>
+
+<span class="cm"># Или отправка в Logstash для обработки</span>
+<span class="cm"># output.logstash:</span>
+<span class="cm">#   hosts: ["logstash:5044"]</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ТРЕЙСИНГ ===== -->
+            <div class="section">
+                <div class="section-label">Распределённый трейсинг</div>
+                <h2>Трейсинг</h2>
+
+                <p><strong>Распределённый трейсинг (distributed tracing)</strong> &mdash; это метод отслеживания пути запроса через множество микросервисов. Когда пользователь нажимает кнопку «Купить», запрос может пройти через API Gateway, сервис аутентификации, сервис заказов, сервис оплаты, сервис уведомлений и несколько баз данных. Без трейсинга, если один из этих шагов замедляется, найти причину крайне сложно &mdash; метрики покажут общую деградацию, но не укажут конкретный сервис и конкретный вызов, где произошла задержка. Трейсинг решает эту проблему, присваивая каждому запросу уникальный <strong>trace ID</strong>, который передаётся (propagates) между всеми сервисами.</p>
+
+                <p>Основные концепции трейсинга: <strong>Trace</strong> &mdash; полная цепочка вызовов от начала до конца, идентифицируемая уникальным trace ID. <strong>Span</strong> &mdash; отдельная операция внутри трейса (HTTP-запрос, запрос к БД, вызов функции); каждый span имеет имя, время начала, длительность и ссылку на родительский span. <strong>Context propagation</strong> &mdash; механизм передачи trace ID между сервисами, обычно через HTTP-заголовки (<code>traceparent</code>, <code>X-B3-TraceId</code>). <strong>OpenTelemetry (OTel)</strong> &mdash; стандарт CNCF, объединивший OpenTracing и OpenCensus, ставший единым стандартом для инструментации приложений. OTel предоставляет SDK для всех популярных языков и позволяет собирать метрики, логи и трейсы через единый API.</p>
+
+                <p>Популярные системы трейсинга: <strong>Jaeger</strong> &mdash; open-source проект от Uber, принятый в CNCF, поддерживает хранение в Elasticsearch, Cassandra и Kafka, имеет удобный веб-интерфейс для визуализации трейсов. <strong>Zipkin</strong> &mdash; более ранний проект от Twitter, легче в установке, но менее функциональный. <strong>Grafana Tempo</strong> &mdash; бэкенд для хранения трейсов, интегрированный с Grafana, хранит трейсы в объектном хранилище (S3, GCS) и не требует индексации. В практике DevOps трейсинг особенно ценен для отладки проблем с латентностью, выявления bottleneck-сервисов и понимания зависимостей между компонентами. Совмещение трейсов с логами и метриками через единый correlation ID даёт полную картину работы системы.</p>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <p class="section-label">Практика</p>
+                <h2>Пошаговый туториал</h2>
+                <p>Развернём стек мониторинга из Prometheus, Grafana и Node Exporter с помощью Docker Compose. Создадим дашборд с ключевыми метриками и настроим алерт на высокую загрузку CPU. Предполагается, что Docker и Docker Compose уже установлены.</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 &mdash; Структура проекта</div>
+                    <p>Создадим директорию проекта со всеми необходимыми конфигурационными файлами. Мы будем использовать три сервиса: Prometheus для сбора метрик, Node Exporter для экспорта метрик хостовой ОС и Grafana для визуализации.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание структуры проекта</div>
+                        <pre><code><span class="fn">mkdir</span> <span class="fl">-p</span> monitoring/{prometheus/rules,grafana}
+<span class="fn">cd</span> monitoring
+
+<span class="cm"># Структура:</span>
+<span class="cm"># monitoring/</span>
+<span class="cm"># ├── docker-compose.yml</span>
+<span class="cm"># ├── prometheus/</span>
+<span class="cm"># │   ├── prometheus.yml</span>
+<span class="cm"># │   └── rules/</span>
+<span class="cm"># │       └── alerts.yml</span>
+<span class="cm"># └── grafana/</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 &mdash; Docker Compose</div>
+                    <p>Создадим файл <code>docker-compose.yml</code>, описывающий все три сервиса. Prometheus будет собирать метрики из Node Exporter и из самого себя. Grafana подключится к Prometheus как к источнику данных.</p>
+                    <div class="code-block">
+                        <div class="code-header">docker-compose.yml</div>
+                        <pre><code><span class="kw">version:</span> <span class="st">"3.8"</span>
+
+<span class="kw">services:</span>
+  <span class="kw">prometheus:</span>
+    <span class="kw">image:</span> <span class="st">prom/prometheus:latest</span>
+    <span class="kw">container_name:</span> <span class="st">prometheus</span>
+    <span class="kw">volumes:</span>
+      - <span class="st">./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml</span>
+      - <span class="st">./prometheus/rules:/etc/prometheus/rules</span>
+      - <span class="st">prometheus_data:/prometheus</span>
+    <span class="kw">command:</span>
+      - <span class="st">"--config.file=/etc/prometheus/prometheus.yml"</span>
+      - <span class="st">"--storage.tsdb.retention.time=30d"</span>
+      - <span class="st">"--web.enable-lifecycle"</span>
+    <span class="kw">ports:</span>
+      - <span class="st">"9090:9090"</span>
+    <span class="kw">restart:</span> <span class="st">unless-stopped</span>
+
+  <span class="kw">node-exporter:</span>
+    <span class="kw">image:</span> <span class="st">prom/node-exporter:latest</span>
+    <span class="kw">container_name:</span> <span class="st">node-exporter</span>
+    <span class="kw">volumes:</span>
+      - <span class="st">/proc:/host/proc:ro</span>
+      - <span class="st">/sys:/host/sys:ro</span>
+      - <span class="st">/:/rootfs:ro</span>
+    <span class="kw">command:</span>
+      - <span class="st">"--path.procfs=/host/proc"</span>
+      - <span class="st">"--path.sysfs=/host/sys"</span>
+      - <span class="st">"--path.rootfs=/rootfs"</span>
+      - <span class="st">"--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"</span>
+    <span class="kw">ports:</span>
+      - <span class="st">"9100:9100"</span>
+    <span class="kw">restart:</span> <span class="st">unless-stopped</span>
+
+  <span class="kw">grafana:</span>
+    <span class="kw">image:</span> <span class="st">grafana/grafana:latest</span>
+    <span class="kw">container_name:</span> <span class="st">grafana</span>
+    <span class="kw">environment:</span>
+      - <span class="st">GF_SECURITY_ADMIN_USER=admin</span>
+      - <span class="st">GF_SECURITY_ADMIN_PASSWORD=admin</span>
+    <span class="kw">volumes:</span>
+      - <span class="st">grafana_data:/var/lib/grafana</span>
+    <span class="kw">ports:</span>
+      - <span class="st">"3000:3000"</span>
+    <span class="kw">depends_on:</span>
+      - <span class="st">prometheus</span>
+    <span class="kw">restart:</span> <span class="st">unless-stopped</span>
+
+<span class="kw">volumes:</span>
+  <span class="kw">prometheus_data:</span>
+  <span class="kw">grafana_data:</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 &mdash; Конфигурация Prometheus</div>
+                    <p>Создадим конфигурационный файл Prometheus с двумя targets: сам Prometheus и Node Exporter. Также подключим файл с правилами алертинга.</p>
+                    <div class="code-block">
+                        <div class="code-header">prometheus/prometheus.yml</div>
+                        <pre><code><span class="kw">global:</span>
+  <span class="kw">scrape_interval:</span> <span class="fl">15s</span>
+  <span class="kw">evaluation_interval:</span> <span class="fl">15s</span>
+
+<span class="kw">rule_files:</span>
+  - <span class="st">"rules/*.yml"</span>
+
+<span class="kw">scrape_configs:</span>
+  - <span class="kw">job_name:</span> <span class="st">"prometheus"</span>
+    <span class="kw">static_configs:</span>
+      - <span class="kw">targets:</span> [<span class="st">"localhost:9090"</span>]
+
+  - <span class="kw">job_name:</span> <span class="st">"node"</span>
+    <span class="kw">static_configs:</span>
+      - <span class="kw">targets:</span> [<span class="st">"node-exporter:9100"</span>]</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 &mdash; Правила алертинга</div>
+                    <p>Создадим файл с правилами алертинга для отслеживания высокой загрузки CPU. Алерт сработает, если CPU загружен более чем на 80% в течение 5 минут.</p>
+                    <div class="code-block">
+                        <div class="code-header">prometheus/rules/alerts.yml</div>
+                        <pre><code><span class="kw">groups:</span>
+  - <span class="kw">name:</span> <span class="st">node_alerts</span>
+    <span class="kw">rules:</span>
+      - <span class="kw">alert:</span> <span class="st">HighCpuUsage</span>
+        <span class="kw">expr:</span> >
+          <span class="fl">100</span> - (<span class="fn">avg</span> <span class="kw">by</span> (<span class="st">instance</span>) (
+            <span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>])
+          ) * <span class="fl">100</span>) > <span class="fl">80</span>
+        <span class="kw">for:</span> <span class="fl">5m</span>
+        <span class="kw">labels:</span>
+          <span class="kw">severity:</span> <span class="st">warning</span>
+        <span class="kw">annotations:</span>
+          <span class="kw">summary:</span> <span class="st">"Высокая загрузка CPU"</span>
+          <span class="kw">description:</span> <span class="st">"CPU на {{ $labels.instance }} загружен на {{ $value | printf \"%.1f\" }}%"</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 &mdash; Запуск и проверка</div>
+                    <p>Запустим весь стек одной командой и убедимся, что все сервисы работают корректно. После запуска Prometheus начнёт собирать метрики, а Grafana будет доступна через браузер.</p>
+                    <div class="code-block">
+                        <div class="code-header">Запуск стека мониторинга</div>
+                        <pre><code><span class="cm"># Запуск всех сервисов</span>
+<span class="fn">docker</span> compose up <span class="fl">-d</span>
+
+<span class="cm"># Проверка статуса</span>
+<span class="fn">docker</span> compose ps
+
+<span class="cm"># Проверка логов</span>
+<span class="fn">docker</span> compose logs prometheus
+<span class="fn">docker</span> compose logs grafana
+
+<span class="cm"># Проверка, что Prometheus собирает метрики</span>
+<span class="fn">curl</span> <span class="st">http://localhost:9090/api/v1/targets</span> | <span class="fn">jq</span> <span class="st">'.data.activeTargets[] | {instance: .labels.instance, health: .health}'</span>
+
+<span class="cm"># Тестовый запрос PromQL</span>
+<span class="fn">curl</span> <span class="st">'http://localhost:9090/api/v1/query?query=up'</span> | <span class="fn">jq</span>
+
+<span class="cm"># Доступ к интерфейсам:</span>
+<span class="cm"># Prometheus:  http://localhost:9090</span>
+<span class="cm"># Grafana:     http://localhost:3000 (admin/admin)</span>
+<span class="cm"># Node Exp.:   http://localhost:9100/metrics</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 6 &mdash; Создание дашборда в Grafana</div>
+                    <p>Откройте Grafana в браузере (<code>http://localhost:3000</code>, логин <code>admin</code> / пароль <code>admin</code>). Добавьте Prometheus как источник данных и создайте дашборд с панелями CPU, RAM и диска.</p>
+                    <div class="code-block">
+                        <div class="code-header">Настройка Grafana</div>
+                        <pre><code><span class="cm"># 1. Добавить Prometheus как Data Source:</span>
+<span class="cm">#    Configuration → Data Sources → Add data source</span>
+<span class="cm">#    Type: Prometheus</span>
+<span class="cm">#    URL: http://prometheus:9090</span>
+<span class="cm">#    → Save & Test</span>
+
+<span class="cm"># 2. Импортировать готовый дашборд Node Exporter Full:</span>
+<span class="cm">#    Dashboards → Import → ID: 1860 → Load</span>
+<span class="cm">#    Выбрать Prometheus → Import</span>
+
+<span class="cm"># 3. Или создать свой дашборд с панелями:</span>
+
+<span class="cm"># Панель CPU Usage (%):</span>
+<span class="fl">100</span> - (<span class="fn">avg</span> <span class="kw">by</span> (<span class="st">instance</span>) (
+  <span class="fn">rate</span>(<span class="fn">node_cpu_seconds_total</span>{<span class="kw">mode</span>=<span class="st">"idle"</span>}[<span class="fl">5m</span>])
+) * <span class="fl">100</span>)
+
+<span class="cm"># Панель Memory Usage (%):</span>
+(<span class="fl">1</span> - <span class="fn">node_memory_MemAvailable_bytes</span>
+  / <span class="fn">node_memory_MemTotal_bytes</span>) * <span class="fl">100</span>
+
+<span class="cm"># Панель Disk Usage (%):</span>
+(<span class="fl">1</span> - <span class="fn">node_filesystem_avail_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}
+  / <span class="fn">node_filesystem_size_bytes</span>{<span class="kw">mountpoint</span>=<span class="st">"/"</span>}) * <span class="fl">100</span>
+
+<span class="cm"># Панель Network Traffic (Мбит/с):</span>
+<span class="fn">rate</span>(<span class="fn">node_network_receive_bytes_total</span>{<span class="kw">device</span>!=<span class="st">"lo"</span>}[<span class="fl">5m</span>]) * <span class="fl">8</span> / <span class="fl">1024</span> / <span class="fl">1024</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 7 &mdash; Настройка алерта в Grafana</div>
+                    <p>Настроим уведомление в Grafana при высокой загрузке CPU. Grafana может отправлять алерты через email, Slack, Telegram и другие каналы.</p>
+                    <div class="code-block">
+                        <div class="code-header">Настройка алерта</div>
+                        <pre><code><span class="cm"># 1. Настроить Contact Point:</span>
+<span class="cm">#    Alerting → Contact points → New contact point</span>
+<span class="cm">#    Name: email-team</span>
+<span class="cm">#    Type: Email</span>
+<span class="cm">#    Addresses: team@example.com</span>
+
+<span class="cm"># 2. Создать Alert Rule:</span>
+<span class="cm">#    Alerting → Alert rules → New alert rule</span>
+<span class="cm">#    Name: High CPU Usage</span>
+<span class="cm">#    Metric: (PromQL запрос для CPU)</span>
+<span class="cm">#    Condition: IS ABOVE 80</span>
+<span class="cm">#    Evaluate every: 1m for 5m</span>
+
+<span class="cm"># 3. Проверить правило алертинга в Prometheus:</span>
+<span class="fn">curl</span> <span class="st">http://localhost:9090/api/v1/rules</span> | <span class="fn">jq</span> <span class="st">'.data.groups[].rules[] | {name: .name, state: .state}'</span>
+
+<span class="cm"># 4. Создать нагрузку для тестирования алерта:</span>
+<span class="fn">stress</span> <span class="fl">--cpu</span> <span class="fl">4</span> <span class="fl">--timeout</span> <span class="fl">600</span>
+<span class="cm"># или</span>
+<span class="fn">dd</span> <span class="kw">if</span>=<span class="st">/dev/urandom</span> <span class="kw">of</span>=<span class="st">/dev/null</span> <span class="fl">bs=1M</span> &amp;</code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> у вас есть полноценный стек мониторинга: Prometheus собирает метрики каждые 15 секунд, Node Exporter предоставляет метрики ОС, Grafana визуализирует данные на дашборде, а правило алертинга предупредит вас о высокой загрузке CPU. Следующий шаг &mdash; добавить Alertmanager для маршрутизации алертов и Loki для сбора логов.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Разверните стек Prometheus + Grafana + Node Exporter с помощью Docker Compose. Импортируйте дашборд Node Exporter Full (ID 1860). Убедитесь, что все targets в состоянии <code>UP</code> и метрики отображаются на графиках.</li>
+                    <li>Напишите PromQL-запросы для следующих метрик: процент использования CPU, процент использования памяти, свободное место на диске в гигабайтах, скорость входящего сетевого трафика и 95-й перцентиль латентности HTTP-запросов. Проверьте каждый запрос в веб-интерфейсе Prometheus.</li>
+                    <li>Настройте правила алертинга в Prometheus для трёх сценариев: CPU > 85% более 5 минут, диск заполнен более чем на 90%, сервис недоступен более 2 минут. Добавьте Alertmanager и настройте отправку уведомлений в Telegram или Slack.</li>
+                    <li>Разверните Grafana Loki с помощью Docker Compose. Настройте Promtail для сбора логов из <code>/var/log</code>. Создайте дашборд в Grafana, объединяющий метрики из Prometheus и логи из Loki на одном экране.</li>
+                    <li>Создайте собственный дашборд в Grafana с переменными: добавьте переменную <code>instance</code> для выбора сервера и <code>interval</code> для выбора интервала агрегации. Все панели должны использовать эти переменные. Экспортируйте дашборд как JSON.</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://prometheus.io/docs/introduction/overview/" target="_blank">Prometheus Documentation</a>
+                        <div class="res-desc">Официальная документация Prometheus: архитектура, конфигурация, PromQL, best practices</div>
+                    </li>
+                    <li>
+                        <a href="https://grafana.com/tutorials/" target="_blank">Grafana Tutorials</a>
+                        <div class="res-desc">Официальные туториалы Grafana: создание дашбордов, алертинг, переменные, плагины</div>
+                    </li>
+                    <li>
+                        <a href="https://www.elastic.co/guide/index.html" target="_blank">Elastic Documentation</a>
+                        <div class="res-desc">Документация Elasticsearch, Logstash, Kibana, Filebeat и всего Elastic Stack</div>
+                    </li>
+                    <li>
+                        <a href="https://sre.google/sre-book/table-of-contents/" target="_blank">Google SRE Book</a>
+                        <div class="res-desc">Бесплатная книга от Google о Site Reliability Engineering: SLO, мониторинг, алертинг, инцидент-менеджмент</div>
+                    </li>
+                    <li>
+                        <a href="https://opentelemetry.io/docs/" target="_blank">OpenTelemetry Documentation</a>
+                        <div class="res-desc">Стандарт инструментации: метрики, логи, трейсы через единый SDK</div>
+                    </li>
+                    <li>
+                        <a href="https://grafana.com/docs/loki/latest/" target="_blank">Grafana Loki Documentation</a>
+                        <div class="res-desc">Документация Loki: лёгкая альтернатива ELK для централизованного логирования</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="monitoring">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="cloud.html" class="nav-title">&larr; Облачные платформы</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="security.html" class="nav-title">Безопасность &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

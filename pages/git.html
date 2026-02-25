@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Git</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Git</h1>
+            <p class="subtitle">Система контроля версий &mdash; фундамент любого DevOps-процесса. Без Git невозможны CI/CD, инфраструктура как код и командная работа над проектами.</p>
+
+            <!-- ================================================================== -->
+            <!--  ВВЕДЕНИЕ                                                           -->
+            <!-- ================================================================== -->
+            <h2>Введение</h2>
+
+            <p>Git &mdash; это <strong>распределённая система контроля версий</strong> (Distributed Version Control System, DVCS). Она фиксирует каждое изменение в проекте, позволяет откатываться к любой точке истории и объединять работу нескольких разработчиков без потерь.</p>
+
+            <h3>Централизованные и распределённые VCS</h3>
+            <p>В <strong>централизованных</strong> системах (CVS, Subversion) единственный сервер хранит полную историю, а разработчики получают лишь текущий снимок файлов. Если сервер недоступен &mdash; работа останавливается, а если его диск выходит из строя без резервных копий &mdash; история потеряна навсегда.</p>
+            <p>В <strong>распределённых</strong> системах (Git, Mercurial) каждый разработчик клонирует <em>весь</em> репозиторий целиком: файлы, коммиты, ветки, теги. Любой клон &mdash; полноценная резервная копия. Можно коммитить, создавать ветки, просматривать историю и сравнивать версии полностью офлайн.</p>
+
+            <h3>Почему Git победил</h3>
+            <p>В 2005 году <strong>Линус Торвальдс</strong> создал Git для разработки ядра Linux, когда лицензия прежней VCS (BitKeeper) перестала быть бесплатной. Торвальдс поставил три цели: <strong>скорость</strong>, <strong>простоту ветвления</strong> и <strong>распределённость</strong>. Git достиг всех трёх. Создание ветки &mdash; мгновенная операция (запись 41-байтного файла). Полная история Linux-ядра (миллионы строк, сотни тысяч коммитов) обрабатывается за секунды. Сегодня Git &mdash; де-факто стандарт: его используют GitHub, GitLab, Bitbucket и практически все команды в индустрии.</p>
+
+            <!-- ================================================================== -->
+            <!--  БАЗОВЫЕ КОНЦЕПЦИИ                                                  -->
+            <!-- ================================================================== -->
+            <h2>Базовые концепции</h2>
+
+            <h3>Три области: рабочая директория, индекс, репозиторий</h3>
+            <p>Git оперирует тремя основными областями:</p>
+            <div class="concepts">
+                <div class="concept">
+                    <h3>Working Directory (рабочая директория)</h3>
+                    <p>Файлы на диске, с которыми вы непосредственно работаете. Это извлечённый снимок одной конкретной версии проекта. Здесь вы редактируете код, добавляете файлы, удаляете лишнее.</p>
+                </div>
+                <div class="concept">
+                    <h3>Staging Area / Index (область подготовки)</h3>
+                    <p>Промежуточный слой между рабочей директорией и репозиторием. Когда вы выполняете <code>git add</code>, файл копируется в индекс. Индекс &mdash; это &laquo;черновик&raquo; следующего коммита. Он позволяет точечно выбирать, какие именно изменения войдут в коммит, а какие &mdash; нет.</p>
+                </div>
+                <div class="concept">
+                    <h3>Repository (репозиторий / .git)</h3>
+                    <p>Каталог <code>.git</code> внутри проекта. Здесь Git хранит всю историю: объекты (блобы, деревья, коммиты), ссылки (ветки, теги), конфигурацию. Команда <code>git commit</code> берёт содержимое индекса и создаёт из него постоянный снимок в репозитории.</p>
+                </div>
+            </div>
+
+            <h3>Три состояния файла</h3>
+            <p>Любой отслеживаемый файл в Git находится в одном из трёх состояний:</p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Состояние</th>
+                            <th>Описание</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Modified</strong></td>
+                            <td>Файл изменён в рабочей директории, но ещё не добавлен в индекс</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Staged</strong></td>
+                            <td>Файл добавлен в индекс командой <code>git add</code> и готов к коммиту</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Committed</strong></td>
+                            <td>Файл безопасно сохранён в локальном репозитории</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Внутренние объекты Git</h3>
+            <p>Git &mdash; это, по сути, <strong>адресуемое по содержимому хранилище</strong> (content-addressable storage). Каждый объект получает уникальный идентификатор &mdash; SHA-1 хеш (40 символов). Существует четыре типа объектов:</p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Объект</th>
+                            <th>Назначение</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>blob</strong></td>
+                            <td>Содержимое одного файла (без имени и прав). Два файла с одинаковым содержимым &mdash; один блоб.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>tree</strong></td>
+                            <td>Директория: список имён файлов, прав доступа и ссылок на блобы или другие деревья.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>commit</strong></td>
+                            <td>Снимок проекта: ссылка на корневое дерево, автор, дата, сообщение и ссылки на родительские коммиты.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>tag</strong></td>
+                            <td>Аннотированный тег: именованная ссылка на коммит с подписью и описанием.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>HEAD, ветки и ссылки</h3>
+            <p><strong>HEAD</strong> &mdash; специальный указатель, который показывает, на каком коммите (или ветке) вы находитесь прямо сейчас. Обычно HEAD указывает на имя ветки (например, <code>main</code>), а ветка &mdash; на конкретный SHA-1 коммита.</p>
+            <p><strong>Ветка</strong> (branch) в Git &mdash; это просто файл, содержащий 40-символьный SHA-1 хеш коммита. Создать ветку &mdash; значит записать один файл. Именно поэтому ветвление в Git практически бесплатно, в отличие от централизованных систем, которые копируют все файлы.</p>
+
+            <div class="note">
+                <strong>Ключевая идея:</strong> ветка &mdash; это подвижный указатель на коммит. Каждый новый коммит автоматически сдвигает указатель текущей ветки вперёд. HEAD &rarr; ветка &rarr; коммит &rarr; дерево &rarr; блобы.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  НАСТРОЙКА И НАЧАЛО РАБОТЫ                                          -->
+            <!-- ================================================================== -->
+            <h2>Настройка и начало работы</h2>
+
+            <h3>Конфигурация: git config</h3>
+            <p>Перед первым коммитом Git должен знать ваше имя и email &mdash; они записываются в каждый коммит. Уровни конфигурации: <code>--system</code> (для всей машины), <code>--global</code> (для пользователя), <code>--local</code> (для конкретного репозитория, по умолчанию).</p>
+
+            <div class="code-block">
+                <div class="code-header">Первоначальная настройка</div>
+<pre><span class="cm"># Имя и email (обязательно)</span>
+<span class="fn">git config</span> <span class="fl">--global</span> user.name <span class="st">"Ivan Petrov"</span>
+<span class="fn">git config</span> <span class="fl">--global</span> user.email <span class="st">"ivan@example.com"</span>
+
+<span class="cm"># Предпочитаемый редактор (по умолчанию vi)</span>
+<span class="fn">git config</span> <span class="fl">--global</span> core.editor <span class="st">"code --wait"</span>
+
+<span class="cm"># Включить цветной вывод</span>
+<span class="fn">git config</span> <span class="fl">--global</span> color.ui auto
+
+<span class="cm"># Установить ветку по умолчанию для новых репозиториев</span>
+<span class="fn">git config</span> <span class="fl">--global</span> init.defaultBranch main
+
+<span class="cm"># Проверить все настройки</span>
+<span class="fn">git config</span> <span class="fl">--list</span></pre>
+            </div>
+
+            <h3>Создание репозитория: git init и git clone</h3>
+
+            <div class="code-block">
+                <div class="code-header">git init — создание нового репозитория</div>
+<pre><span class="fn">mkdir</span> my-project
+<span class="fn">cd</span> my-project
+<span class="fn">git init</span>
+
+<span class="cm"># Создаётся скрытый каталог .git/ со всей структурой:</span>
+<span class="cm">#   .git/objects/    — хранилище объектов</span>
+<span class="cm">#   .git/refs/       — ссылки (ветки, теги)</span>
+<span class="cm">#   .git/HEAD        — указатель текущей ветки</span>
+<span class="cm">#   .git/config      — локальная конфигурация</span></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">git clone — клонирование существующего репозитория</div>
+<pre><span class="cm"># Клонировать по HTTPS</span>
+<span class="fn">git clone</span> <span class="st">https://github.com/user/repo.git</span>
+
+<span class="cm"># Клонировать по SSH (рекомендуется — не нужно вводить пароль)</span>
+<span class="fn">git clone</span> <span class="st">git@github.com:user/repo.git</span>
+
+<span class="cm"># Клонировать в конкретную директорию</span>
+<span class="fn">git clone</span> <span class="st">https://github.com/user/repo.git</span> my-folder
+
+<span class="cm"># Поверхностное клонирование (только последний коммит — быстрее)</span>
+<span class="fn">git clone</span> <span class="fl">--depth 1</span> <span class="st">https://github.com/user/repo.git</span></pre>
+            </div>
+
+            <h3>Файл .gitignore</h3>
+            <p>Файл <code>.gitignore</code> в корне репозитория указывает Git, какие файлы и директории следует игнорировать. Это критически важно: логи, артефакты сборки, зависимости и секреты не должны попадать в репозиторий.</p>
+
+            <div class="code-block">
+                <div class="code-header">.gitignore — типичные паттерны</div>
+<pre><span class="cm"># Зависимости</span>
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+<span class="cm"># Артефакты сборки</span>
+dist/
+build/
+*.o
+*.class
+
+<span class="cm"># Конфигурация IDE</span>
+.idea/
+.vscode/
+*.swp
+
+<span class="cm"># Секреты и переменные окружения</span>
+.env
+.env.local
+*.pem
+credentials.json
+
+<span class="cm"># Логи</span>
+*.log
+logs/
+
+<span class="cm"># Системные файлы</span>
+.DS_Store
+Thumbs.db</pre>
+            </div>
+
+            <div class="note">
+                <strong>Совет:</strong> используйте сервис <a href="https://gitignore.io" target="_blank">gitignore.io</a> для генерации <code>.gitignore</code> под ваш стек технологий. Если файл уже был закоммичен, простое добавление его в <code>.gitignore</code> не поможет &mdash; нужно удалить его из индекса: <code>git rm --cached &lt;file&gt;</code>.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ЕЖЕДНЕВНЫЕ КОМАНДЫ                                                 -->
+            <!-- ================================================================== -->
+            <h2>Ежедневные команды</h2>
+
+            <p>Эти команды составляют 90% повседневной работы с Git. Разберём каждую подробно.</p>
+
+            <h3>git add &mdash; подготовка изменений</h3>
+            <p>Команда <code>git add</code> копирует изменения из рабочей директории в индекс (staging area). Только то, что находится в индексе, попадёт в следующий коммит.</p>
+
+            <div class="code-block">
+                <div class="code-header">git add</div>
+<pre><span class="fn">git add</span> file.txt              <span class="cm"># Добавить конкретный файл</span>
+<span class="fn">git add</span> src/                   <span class="cm"># Добавить всю директорию</span>
+<span class="fn">git add</span> <span class="fl">-A</span>                     <span class="cm"># Добавить все изменения (новые, изменённые, удалённые)</span>
+<span class="fn">git add</span> <span class="fl">-p</span>                     <span class="cm"># Интерактивный режим: выбрать отдельные куски (hunks)</span>
+<span class="fn">git add</span> <span class="st">'*.js'</span>                 <span class="cm"># Добавить все JS-файлы (glob-паттерн)</span></pre>
+            </div>
+
+            <div class="note">
+                <strong>Лучшая практика:</strong> не используйте <code>git add -A</code> вслепую. Перед коммитом всегда проверяйте <code>git status</code> и <code>git diff --staged</code>, чтобы точно знать, что вы фиксируете.
+            </div>
+
+            <h3>git commit &mdash; фиксация изменений</h3>
+            <p>Коммит создаёт неизменяемый снимок индекса и записывает его в историю. Каждый коммит содержит: ссылку на дерево (снимок файлов), автора, дату, сообщение и ссылку на родительский коммит.</p>
+
+            <div class="code-block">
+                <div class="code-header">git commit</div>
+<pre><span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat: add user authentication"</span>
+
+<span class="cm"># Открыть редактор для длинного сообщения</span>
+<span class="fn">git commit</span>
+
+<span class="cm"># Добавить все отслеживаемые файлы и закоммитить (пропуская git add)</span>
+<span class="fn">git commit</span> <span class="fl">-am</span> <span class="st">"fix: correct database connection timeout"</span>
+
+<span class="cm"># Исправить последний коммит (сообщение или содержимое)</span>
+<span class="fn">git commit</span> <span class="fl">--amend</span> <span class="fl">-m</span> <span class="st">"fix: correct db connection timeout"</span></pre>
+            </div>
+
+            <h3>git status &mdash; состояние репозитория</h3>
+            <p>Показывает текущее состояние рабочей директории и индекса: какие файлы изменены, какие добавлены в индекс, какие не отслеживаются.</p>
+
+            <div class="code-block">
+                <div class="code-header">git status</div>
+<pre><span class="fn">git status</span>                     <span class="cm"># Полный вывод</span>
+<span class="fn">git status</span> <span class="fl">-s</span>                  <span class="cm"># Краткий формат (short)</span>
+
+<span class="cm"># Пример вывода -s:</span>
+<span class="cm">#  M  README.md        — изменён, не в индексе</span>
+<span class="cm"># M   app.js           — изменён, в индексе (staged)</span>
+<span class="cm"># MM  style.css        — изменён, частично в индексе</span>
+<span class="cm"># ??  newfile.txt      — не отслеживается</span>
+<span class="cm"># A   added.txt        — новый файл добавлен в индекс</span>
+<span class="cm"># D   deleted.txt      — удалён</span></pre>
+            </div>
+
+            <h3>git diff &mdash; сравнение изменений</h3>
+            <p>Показывает разницу между различными состояниями: рабочей директорией, индексом и коммитами.</p>
+
+            <div class="code-block">
+                <div class="code-header">git diff</div>
+<pre><span class="fn">git diff</span>                       <span class="cm"># Рабочая директория vs индекс (что ещё не staged)</span>
+<span class="fn">git diff</span> <span class="fl">--staged</span>              <span class="cm"># Индекс vs последний коммит (что будет закоммичено)</span>
+<span class="fn">git diff</span> HEAD                  <span class="cm"># Рабочая директория vs последний коммит</span>
+<span class="fn">git diff</span> main..feature          <span class="cm"># Разница между двумя ветками</span>
+<span class="fn">git diff</span> abc123..def456         <span class="cm"># Разница между двумя коммитами</span>
+<span class="fn">git diff</span> <span class="fl">--stat</span>                <span class="cm"># Только статистика: какие файлы изменены</span></pre>
+            </div>
+
+            <h3>git log &mdash; история коммитов</h3>
+            <p>Просмотр истории коммитов &mdash; одна из самых часто используемых операций. Git log поддерживает множество полезных флагов форматирования.</p>
+
+            <div class="code-block">
+                <div class="code-header">git log</div>
+<pre><span class="fn">git log</span>                            <span class="cm"># Полная история</span>
+<span class="fn">git log</span> <span class="fl">--oneline</span>                  <span class="cm"># Компактно: хеш + сообщение</span>
+<span class="fn">git log</span> <span class="fl">--oneline --graph --all</span>     <span class="cm"># Граф всех веток (ASCII-арт)</span>
+<span class="fn">git log</span> <span class="fl">-n 5</span>                       <span class="cm"># Последние 5 коммитов</span>
+<span class="fn">git log</span> <span class="fl">--author="Ivan"</span>             <span class="cm"># Только коммиты конкретного автора</span>
+<span class="fn">git log</span> <span class="fl">--since="2024-01-01"</span>        <span class="cm"># Коммиты с определённой даты</span>
+<span class="fn">git log</span> <span class="fl">--grep="fix"</span>               <span class="cm"># Поиск по сообщению коммита</span>
+<span class="fn">git log</span> <span class="fl">-p</span> file.txt                <span class="cm"># История изменений конкретного файла</span>
+<span class="fn">git log</span> <span class="fl">--stat</span>                     <span class="cm"># С подробной статистикой изменений</span></pre>
+            </div>
+
+            <h3>git stash &mdash; временное сохранение изменений</h3>
+            <p>Stash позволяет &laquo;отложить&raquo; незакоммиченные изменения, переключиться на другую задачу, а потом вернуть их. Это стек: можно складывать несколько наборов изменений.</p>
+
+            <div class="code-block">
+                <div class="code-header">git stash</div>
+<pre><span class="fn">git stash</span>                          <span class="cm"># Сохранить изменения в стек</span>
+<span class="fn">git stash</span> <span class="fl">push -m</span> <span class="st">"WIP: login"</span>   <span class="cm"># С описанием</span>
+<span class="fn">git stash</span> list                     <span class="cm"># Список всех stash-записей</span>
+<span class="fn">git stash</span> pop                      <span class="cm"># Применить последний stash и удалить из стека</span>
+<span class="fn">git stash</span> apply                    <span class="cm"># Применить, но оставить в стеке</span>
+<span class="fn">git stash</span> drop                     <span class="cm"># Удалить последний stash</span>
+<span class="fn">git stash</span> clear                    <span class="cm"># Очистить весь стек</span></pre>
+            </div>
+
+            <h3>git show &mdash; детали коммита</h3>
+            <p>Показывает метаданные и diff конкретного коммита, тега или другого объекта.</p>
+
+            <div class="code-block">
+                <div class="code-header">git show</div>
+<pre><span class="fn">git show</span>                           <span class="cm"># Детали последнего коммита (HEAD)</span>
+<span class="fn">git show</span> abc1234                   <span class="cm"># Конкретный коммит</span>
+<span class="fn">git show</span> HEAD~3                    <span class="cm"># Три коммита назад</span>
+<span class="fn">git show</span> v1.0.0                    <span class="cm"># Информация о теге</span>
+<span class="fn">git show</span> main:src/app.js           <span class="cm"># Содержимое файла в другой ветке</span></pre>
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ВЕТВЛЕНИЕ И СЛИЯНИЕ                                                -->
+            <!-- ================================================================== -->
+            <h2>Ветвление и слияние</h2>
+
+            <p>Ветвление &mdash; одна из самых мощных возможностей Git. Создание ветки &mdash; это запись одного SHA-1 хеша в файл (41 байт), поэтому операция мгновенна. В SVN создание ветки означает копирование всего проекта &mdash; в Git это один указатель.</p>
+
+            <h3>Управление ветками</h3>
+
+            <div class="code-block">
+                <div class="code-header">Работа с ветками</div>
+<pre><span class="fn">git branch</span>                         <span class="cm"># Список локальных веток</span>
+<span class="fn">git branch</span> <span class="fl">-a</span>                     <span class="cm"># Все ветки (локальные + удалённые)</span>
+<span class="fn">git branch</span> feature/auth            <span class="cm"># Создать новую ветку (но не переключаться)</span>
+<span class="fn">git branch</span> <span class="fl">-d</span> feature/auth        <span class="cm"># Удалить ветку (если слита)</span>
+<span class="fn">git branch</span> <span class="fl">-D</span> feature/auth        <span class="cm"># Удалить принудительно</span>
+<span class="fn">git branch</span> <span class="fl">-m</span> old-name new-name   <span class="cm"># Переименовать ветку</span>
+
+<span class="cm"># Переключение между ветками</span>
+<span class="fn">git checkout</span> feature/auth          <span class="cm"># Классический способ</span>
+<span class="fn">git switch</span> feature/auth            <span class="cm"># Современный способ (Git 2.23+)</span>
+
+<span class="cm"># Создать ветку и переключиться</span>
+<span class="fn">git checkout</span> <span class="fl">-b</span> feature/auth      <span class="cm"># Классический</span>
+<span class="fn">git switch</span> <span class="fl">-c</span> feature/auth        <span class="cm"># Современный</span></pre>
+            </div>
+
+            <h3>Слияние: merge</h3>
+            <p>Слияние объединяет историю двух веток. Git поддерживает два типа слияния:</p>
+
+            <div class="concepts">
+                <div class="concept">
+                    <h3>Fast-forward merge</h3>
+                    <p>Происходит, когда целевая ветка не ушла вперёд от точки ответвления. Git просто передвигает указатель ветки вперёд &mdash; нового коммита не создаётся. Это линейная история без &laquo;узлов слияния&raquo;.</p>
+                </div>
+                <div class="concept">
+                    <h3>3-way merge (трёхстороннее слияние)</h3>
+                    <p>Происходит, когда обе ветки имеют свои коммиты после точки ответвления. Git находит общего предка (merge base), сравнивает изменения в обеих ветках и создаёт <strong>merge commit</strong> с двумя родителями. Если изменения затрагивают разные строки &mdash; слияние автоматическое. Если одни и те же строки &mdash; возникает конфликт.</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">git merge</div>
+<pre><span class="cm"># Перейти на целевую ветку и слить feature-ветку</span>
+<span class="fn">git switch</span> main
+<span class="fn">git merge</span> feature/auth
+
+<span class="cm"># Запретить fast-forward (всегда создавать merge commit)</span>
+<span class="fn">git merge</span> <span class="fl">--no-ff</span> feature/auth
+
+<span class="cm"># Отменить слияние при конфликте</span>
+<span class="fn">git merge</span> <span class="fl">--abort</span></pre>
+            </div>
+
+            <h3>Разрешение конфликтов слияния</h3>
+            <p>Конфликт возникает, когда две ветки изменили одни и те же строки в одном файле. Git не может автоматически решить, какая версия правильная, и помечает конфликтные участки:</p>
+
+            <div class="code-block">
+                <div class="code-header">Формат конфликта в файле</div>
+<pre><span class="kw">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+<span class="cm">// Ваши изменения в текущей ветке</span>
+const timeout = 5000;
+<span class="kw">=======</span>
+<span class="cm">// Изменения из вливаемой ветки</span>
+const timeout = 10000;
+<span class="kw">&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/auth</span></pre>
+            </div>
+
+            <p>Процесс разрешения:</p>
+            <p>1. Откройте конфликтный файл и выберите нужную версию (или объедините обе).</p>
+            <p>2. Удалите маркеры <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>.</p>
+            <p>3. Выполните <code>git add &lt;file&gt;</code>, чтобы пометить конфликт как разрешённый.</p>
+            <p>4. Завершите слияние: <code>git commit</code>.</p>
+
+            <h3>Rebase &mdash; перебазирование</h3>
+            <p><code>git rebase</code> переносит коммиты из одной ветки поверх другой. В отличие от merge, rebase <strong>переписывает историю</strong>: создаёт новые коммиты с теми же изменениями, но с другими SHA-1 хешами и другим родителем.</p>
+
+            <div class="code-block">
+                <div class="code-header">git rebase</div>
+<pre><span class="cm"># Находясь в feature-ветке, перебазировать на main</span>
+<span class="fn">git switch</span> feature/auth
+<span class="fn">git rebase</span> main
+
+<span class="cm"># Результат: коммиты feature/auth «переставлены»</span>
+<span class="cm"># поверх последнего коммита main — линейная история</span>
+
+<span class="cm"># При конфликте во время rebase:</span>
+<span class="cm"># 1. Разрешить конфликт в файлах</span>
+<span class="fn">git add</span> resolved-file.txt
+<span class="fn">git rebase</span> <span class="fl">--continue</span>
+
+<span class="cm"># Или отменить rebase целиком:</span>
+<span class="fn">git rebase</span> <span class="fl">--abort</span></pre>
+            </div>
+
+            <div class="note">
+                <strong>Золотое правило rebase:</strong> никогда не перебазируйте коммиты, которые уже были опубликованы (push) и используются другими разработчиками. Rebase переписывает историю: старые коммиты исчезают, появляются новые с другими хешами. Если кто-то работал на основе старых коммитов &mdash; его история станет несовместимой с вашей. Используйте rebase только для <em>локальных</em>, ещё не опубликованных коммитов.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  УДАЛЁННЫЕ РЕПОЗИТОРИИ                                              -->
+            <!-- ================================================================== -->
+            <h2>Удалённые репозитории</h2>
+
+            <p>Удалённый репозиторий (remote) &mdash; это версия вашего проекта, хранящаяся на другом компьютере или сервере (GitHub, GitLab, Bitbucket, собственный сервер). Он обеспечивает совместную работу и резервное копирование.</p>
+
+            <h3>Управление удалёнными репозиториями</h3>
+
+            <div class="code-block">
+                <div class="code-header">git remote</div>
+<pre><span class="fn">git remote</span> <span class="fl">-v</span>                           <span class="cm"># Список remotes с URL</span>
+<span class="fn">git remote</span> add origin <span class="st">git@github.com:user/repo.git</span>  <span class="cm"># Добавить remote</span>
+<span class="fn">git remote</span> add upstream <span class="st">git@github.com:org/repo.git</span>  <span class="cm"># Второй remote (для форков)</span>
+<span class="fn">git remote</span> rename origin old-origin     <span class="cm"># Переименовать</span>
+<span class="fn">git remote</span> remove old-origin             <span class="cm"># Удалить</span></pre>
+            </div>
+
+            <h3>Получение и отправка изменений</h3>
+
+            <div class="code-block">
+                <div class="code-header">fetch, pull, push</div>
+<pre><span class="cm"># git fetch — скачать изменения с remote, но НЕ сливать</span>
+<span class="fn">git fetch</span> origin                        <span class="cm"># Обновить все ветки с origin</span>
+<span class="fn">git fetch</span> <span class="fl">--all</span>                          <span class="cm"># Обновить со всех remotes</span>
+<span class="fn">git fetch</span> <span class="fl">--prune</span>                        <span class="cm"># Удалить ссылки на удалённые ветки</span>
+
+<span class="cm"># git pull — fetch + merge (или fetch + rebase)</span>
+<span class="fn">git pull</span>                                 <span class="cm"># Стянуть и слить</span>
+<span class="fn">git pull</span> <span class="fl">--rebase</span>                        <span class="cm"># Стянуть и перебазировать (чище история)</span>
+
+<span class="cm"># git push — отправить локальные коммиты на remote</span>
+<span class="fn">git push</span> origin main                     <span class="cm"># Запушить ветку main в origin</span>
+<span class="fn">git push</span> <span class="fl">-u</span> origin feature/auth          <span class="cm"># Запушить и установить tracking</span>
+<span class="fn">git push</span> <span class="fl">--tags</span>                          <span class="cm"># Отправить все теги</span></pre>
+            </div>
+
+            <h3>Tracking-ветки</h3>
+            <p>Tracking-ветка (отслеживающая) &mdash; это локальная ветка, связанная с удалённой. Когда ветка отслеживает remote-ветку, <code>git pull</code> и <code>git push</code> работают без указания аргументов, а <code>git status</code> показывает, на сколько коммитов вы впереди или позади.</p>
+
+            <div class="code-block">
+                <div class="code-header">Tracking</div>
+<pre><span class="cm"># Установить tracking для существующей ветки</span>
+<span class="fn">git branch</span> <span class="fl">--set-upstream-to=</span>origin/main main
+
+<span class="cm"># Посмотреть tracking-связи</span>
+<span class="fn">git branch</span> <span class="fl">-vv</span></pre>
+            </div>
+
+            <h3>origin и upstream</h3>
+            <p><strong>origin</strong> &mdash; общепринятое имя для основного remote-репозитория (того, который вы клонировали или создали). <strong>upstream</strong> &mdash; обычно используется при работе с форками: это оригинальный репозиторий проекта, из которого вы форкнули свою копию.</p>
+
+            <h3>Рабочий процесс с форками и Pull Requests</h3>
+            <p>В открытых проектах и многих командах используется <strong>Fork Workflow</strong>:</p>
+            <p>1. <strong>Fork</strong> &mdash; создаёте копию репозитория в своём аккаунте (кнопка на GitHub/GitLab).</p>
+            <p>2. <strong>Clone</strong> &mdash; клонируете свой форк локально.</p>
+            <p>3. <strong>Add upstream</strong> &mdash; добавляете оригинальный репозиторий как remote <code>upstream</code>.</p>
+            <p>4. <strong>Branch</strong> &mdash; создаёте feature-ветку и работаете в ней.</p>
+            <p>5. <strong>Push</strong> &mdash; пушите ветку в свой форк (<code>origin</code>).</p>
+            <p>6. <strong>Pull Request (PR)</strong> / <strong>Merge Request (MR)</strong> &mdash; создаёте запрос на вливание изменений из своего форка в оригинальный репозиторий. Мейнтейнеры проводят code review и принимают или запрашивают доработку.</p>
+
+            <div class="note">
+                <strong>PR vs MR:</strong> Pull Request &mdash; терминология GitHub. Merge Request &mdash; терминология GitLab. По сути это одно и то же: предложение влить изменения из одной ветки в другую с возможностью обсуждения и code review.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  СТРАТЕГИИ ВЕТВЛЕНИЯ                                                -->
+            <!-- ================================================================== -->
+            <h2>Стратегии ветвления</h2>
+
+            <p>Стратегия ветвления определяет правила: из какой ветки создавать новые, куда сливать, когда и как выпускать релизы. Выбор стратегии зависит от размера команды, частоты деплоя и требований проекта.</p>
+
+            <h3>Git Flow</h3>
+            <p>Разработана Винсентом Дриссеном в 2010 году. Самая формализованная модель, подходит для проектов с чётким графиком релизов.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ветка</th>
+                            <th>Назначение</th>
+                            <th>Живёт</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>main</code></td>
+                            <td>Продакшн-код. Каждый коммит &mdash; релиз. Помечается тегами (v1.0, v1.1).</td>
+                            <td>Вечно</td>
+                        </tr>
+                        <tr>
+                            <td><code>develop</code></td>
+                            <td>Интеграционная ветка для следующего релиза. Сюда вливаются все feature-ветки.</td>
+                            <td>Вечно</td>
+                        </tr>
+                        <tr>
+                            <td><code>feature/*</code></td>
+                            <td>Новая функциональность. Создаётся из <code>develop</code>, вливается обратно в <code>develop</code>.</td>
+                            <td>Временно</td>
+                        </tr>
+                        <tr>
+                            <td><code>release/*</code></td>
+                            <td>Подготовка релиза. Создаётся из <code>develop</code>, вливается в <code>main</code> и <code>develop</code>.</td>
+                            <td>Временно</td>
+                        </tr>
+                        <tr>
+                            <td><code>hotfix/*</code></td>
+                            <td>Срочное исправление в продакшне. Создаётся из <code>main</code>, вливается в <code>main</code> и <code>develop</code>.</td>
+                            <td>Временно</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>GitHub Flow</h3>
+            <p>Упрощённая модель, идеальная для непрерывного деплоя (continuous deployment). Всего два правила:</p>
+            <p>1. Ветка <code>main</code> всегда готова к деплою.</p>
+            <p>2. Любая работа происходит в feature-ветках с Pull Request и code review.</p>
+            <p>Нет отдельных <code>develop</code>, <code>release</code>, <code>hotfix</code> веток &mdash; всё сливается напрямую в <code>main</code> через PR.</p>
+
+            <h3>Trunk-Based Development</h3>
+            <p>Все разработчики коммитят в одну ветку (<code>main</code> / <code>trunk</code>). Feature-ветки либо не используются, либо живут максимум 1&ndash;2 дня. Код защищается <strong>feature flags</strong> (флагами функциональности), а не ветками.</p>
+            <p>Этот подход требует высокой культуры: хороших тестов, CI/CD, маленьких коммитов. Его используют Google, Facebook, Netflix.</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Стратегия</th>
+                            <th>Плюсы</th>
+                            <th>Минусы</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Git Flow</strong></td>
+                            <td>Чёткая структура, подходит для запланированных релизов</td>
+                            <td>Сложная, много веток, медленная интеграция</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GitHub Flow</strong></td>
+                            <td>Простая, быстрая, хороша для CD</td>
+                            <td>Нет поддержки нескольких версий одновременно</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trunk-Based</strong></td>
+                            <td>Минимальные конфликты, быстрая интеграция</td>
+                            <td>Требует зрелых процессов и тестов</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  CONVENTIONAL COMMITS                                               -->
+            <!-- ================================================================== -->
+            <h2>Conventional Commits</h2>
+
+            <p><strong>Conventional Commits</strong> &mdash; это спецификация для форматирования сообщений коммитов. Стандартный формат позволяет автоматически генерировать CHANGELOG, определять версию по семантическому версионированию (SemVer) и делать историю коммитов читаемой для людей и машин.</p>
+
+            <h3>Формат</h3>
+
+            <div class="code-block">
+                <div class="code-header">Структура сообщения коммита</div>
+<pre><span class="kw">&lt;тип&gt;</span>(<span class="fn">область</span>): <span class="st">краткое описание</span>
+
+<span class="cm">[необязательное тело]</span>
+
+<span class="cm">[необязательная подпись]</span></pre>
+            </div>
+
+            <h3>Типы коммитов</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                            <th>SemVer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>feat</code></td>
+                            <td>Новая функциональность</td>
+                            <td>MINOR (1.x.0)</td>
+                        </tr>
+                        <tr>
+                            <td><code>fix</code></td>
+                            <td>Исправление бага</td>
+                            <td>PATCH (1.0.x)</td>
+                        </tr>
+                        <tr>
+                            <td><code>docs</code></td>
+                            <td>Изменения документации</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>refactor</code></td>
+                            <td>Рефакторинг (без изменения поведения)</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>test</code></td>
+                            <td>Добавление или исправление тестов</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>chore</code></td>
+                            <td>Прочие задачи (обновление зависимостей и т.д.)</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>ci</code></td>
+                            <td>Изменения в CI/CD конфигурации</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>style</code></td>
+                            <td>Форматирование кода (пробелы, запятые)</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td><code>perf</code></td>
+                            <td>Улучшение производительности</td>
+                            <td>PATCH (1.0.x)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Примеры</h3>
+
+            <div class="code-block">
+                <div class="code-header">Примеры Conventional Commits</div>
+<pre><span class="cm"># Новая функциональность</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat(auth): add JWT token refresh endpoint"</span>
+
+<span class="cm"># Исправление бага</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"fix(api): handle null response from payment gateway"</span>
+
+<span class="cm"># Документация</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"docs(readme): update installation instructions"</span>
+
+<span class="cm"># Рефакторинг</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"refactor(db): extract connection pool into separate module"</span>
+
+<span class="cm"># CI/CD</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"ci: add GitHub Actions workflow for automated testing"</span>
+
+<span class="cm"># Breaking change (повышает MAJOR)</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat(api)!: change authentication to OAuth 2.0
+
+BREAKING CHANGE: API now requires Bearer token instead of API key."</span></pre>
+            </div>
+
+            <div class="note">
+                <strong>Зачем это нужно:</strong> инструменты вроде <code>semantic-release</code>, <code>standard-version</code>, <code>release-please</code> анализируют сообщения коммитов и автоматически определяют следующую версию, генерируют CHANGELOG и создают релиз. Это ключевой элемент автоматизации в DevOps.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ПРОДВИНУТЫЕ ТЕХНИКИ                                                -->
+            <!-- ================================================================== -->
+            <h2>Продвинутые техники</h2>
+
+            <h3>Интерактивный rebase</h3>
+            <p>Интерактивный rebase (<code>git rebase -i</code>) &mdash; мощный инструмент для &laquo;причёсывания&raquo; истории перед пушем. Он позволяет объединять, переупорядочивать, редактировать и удалять коммиты.</p>
+
+            <div class="code-block">
+                <div class="code-header">Интерактивный rebase</div>
+<pre><span class="cm"># Интерактивно обработать последние 4 коммита</span>
+<span class="fn">git rebase</span> <span class="fl">-i</span> HEAD~4
+
+<span class="cm"># Откроется редактор со списком коммитов:</span>
+<span class="cm"># pick abc1234 feat: add login page</span>
+<span class="cm"># pick def5678 fix: typo in login</span>
+<span class="cm"># pick ghi9012 fix: another typo</span>
+<span class="cm"># pick jkl3456 feat: add logout button</span>
+<span class="cm">#</span>
+<span class="cm"># Команды:</span>
+<span class="cm"># pick   — оставить коммит как есть</span>
+<span class="cm"># squash — объединить с предыдущим (сохранить сообщение)</span>
+<span class="cm"># fixup  — объединить с предыдущим (отбросить сообщение)</span>
+<span class="cm"># edit   — остановиться для редактирования</span>
+<span class="cm"># reword — изменить сообщение коммита</span>
+<span class="cm"># drop   — удалить коммит</span>
+
+<span class="cm"># Пример: объединить два fix-коммита с feat-коммитом:</span>
+<span class="cm"># pick   abc1234 feat: add login page</span>
+<span class="cm"># fixup  def5678 fix: typo in login</span>
+<span class="cm"># fixup  ghi9012 fix: another typo</span>
+<span class="cm"># pick   jkl3456 feat: add logout button</span></pre>
+            </div>
+
+            <h3>cherry-pick &mdash; выборочный перенос коммитов</h3>
+            <p>Команда <code>git cherry-pick</code> берёт изменения из одного конкретного коммита и применяет их к текущей ветке как новый коммит. Полезно, когда нужно перенести hotfix из одной ветки в другую без полного слияния.</p>
+
+            <div class="code-block">
+                <div class="code-header">git cherry-pick</div>
+<pre><span class="cm"># Применить один коммит</span>
+<span class="fn">git cherry-pick</span> abc1234
+
+<span class="cm"># Применить несколько коммитов</span>
+<span class="fn">git cherry-pick</span> abc1234 def5678
+
+<span class="cm"># Применить диапазон коммитов (не включая первый)</span>
+<span class="fn">git cherry-pick</span> abc1234..ghi9012
+
+<span class="cm"># Применить без автоматического коммита (только staged)</span>
+<span class="fn">git cherry-pick</span> <span class="fl">--no-commit</span> abc1234</pre>
+            </div>
+
+            <h3>bisect &mdash; бинарный поиск бага</h3>
+            <p><code>git bisect</code> использует бинарный поиск для нахождения коммита, который внёс баг. Вместо проверки каждого коммита по одному (N шагов), bisect находит виновника за log2(N) шагов.</p>
+
+            <div class="code-block">
+                <div class="code-header">git bisect</div>
+<pre><span class="cm"># Начать бинарный поиск</span>
+<span class="fn">git bisect</span> start
+
+<span class="cm"># Текущий коммит — «плохой» (баг присутствует)</span>
+<span class="fn">git bisect</span> bad
+
+<span class="cm"># Указать «хороший» коммит (где бага точно не было)</span>
+<span class="fn">git bisect</span> good v1.0.0
+
+<span class="cm"># Git переключится на коммит посередине.</span>
+<span class="cm"># Проверьте: баг есть → git bisect bad</span>
+<span class="cm">#           бага нет → git bisect good</span>
+<span class="cm"># Повторяйте, пока Git не найдёт виновный коммит.</span>
+
+<span class="cm"># Завершить bisect и вернуться к исходному состоянию</span>
+<span class="fn">git bisect</span> reset
+
+<span class="cm"># Автоматический bisect с тестовым скриптом</span>
+<span class="fn">git bisect</span> run ./test.sh</pre>
+            </div>
+
+            <h3>reflog &mdash; восстановление потерянных коммитов</h3>
+            <p><code>git reflog</code> &mdash; это журнал всех перемещений HEAD. Даже если вы &laquo;потеряли&raquo; коммит (после reset, rebase, удаления ветки), reflog хранит ссылку на него в течение 90 дней по умолчанию. Это ваша &laquo;страховка&raquo; от ошибок.</p>
+
+            <div class="code-block">
+                <div class="code-header">git reflog</div>
+<pre><span class="cm"># Показать историю перемещений HEAD</span>
+<span class="fn">git reflog</span>
+
+<span class="cm"># Пример вывода:</span>
+<span class="cm"># abc1234 HEAD@{0}: commit: feat: add dashboard</span>
+<span class="cm"># def5678 HEAD@{1}: rebase: moving to main</span>
+<span class="cm"># ghi9012 HEAD@{2}: commit: feat: add sidebar</span>
+
+<span class="cm"># Восстановить «потерянный» коммит</span>
+<span class="fn">git checkout</span> ghi9012
+<span class="fn">git branch</span> recovered-branch
+
+<span class="cm"># Или отменить неудачный reset</span>
+<span class="fn">git reset</span> <span class="fl">--hard</span> HEAD@{2}</pre>
+            </div>
+
+            <div class="note">
+                <strong>Правило:</strong> в Git почти ничего нельзя потерять безвозвратно. Если коммит был создан &mdash; он существует в объектной базе. Reflog поможет найти его SHA-1 хеш, а <code>git checkout</code> или <code>git reset</code> &mdash; восстановить.
+            </div>
+
+            <h3>Submodules &mdash; подмодули</h3>
+            <p>Подмодули позволяют включать один Git-репозиторий в другой как поддиректорию. Это полезно для общих библиотек, используемых несколькими проектами.</p>
+
+            <div class="code-block">
+                <div class="code-header">git submodule</div>
+<pre><span class="cm"># Добавить подмодуль</span>
+<span class="fn">git submodule</span> add <span class="st">https://github.com/lib/utils.git</span> libs/utils
+
+<span class="cm"># Клонировать проект с подмодулями</span>
+<span class="fn">git clone</span> <span class="fl">--recurse-submodules</span> <span class="st">https://github.com/user/project.git</span>
+
+<span class="cm"># Инициализировать подмодули после обычного clone</span>
+<span class="fn">git submodule</span> init
+<span class="fn">git submodule</span> update
+
+<span class="cm"># Обновить подмодуль до последней версии</span>
+<span class="fn">git submodule</span> update <span class="fl">--remote</span></pre>
+            </div>
+
+            <div class="note">
+                <strong>Подводные камни submodules:</strong> подмодули сложны в повседневной работе. Забыть обновить подмодуль, закоммитить не тот ref &mdash; частые ошибки. Современные проекты часто предпочитают менеджеры пакетов (npm, pip, go modules) или монорепозитории.
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ПОШАГОВЫЙ ТУТОРИАЛ                                                 -->
+            <!-- ================================================================== -->
+            <h2>Пошаговый туториал</h2>
+
+            <p>Пройдём полный рабочий цикл: от создания репозитория до слияния Pull Request с разрешением конфликта.</p>
+
+            <div class="step">
+                <div class="step-num">Шаг 1 &mdash; Создание репозитория и первый коммит</div>
+                <div class="code-block">
+<pre><span class="cm"># Создаём директорию проекта</span>
+<span class="fn">mkdir</span> my-app && <span class="fn">cd</span> my-app
+<span class="fn">git init</span>
+
+<span class="cm"># Создаём файлы проекта</span>
+<span class="fn">echo</span> <span class="st">"# My App"</span> > README.md
+<span class="fn">echo</span> <span class="st">"node_modules/"</span> > .gitignore
+
+<span class="cm"># Проверяем статус — два новых файла</span>
+<span class="fn">git status</span>
+
+<span class="cm"># Добавляем в индекс и коммитим</span>
+<span class="fn">git add</span> README.md .gitignore
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat: initial project setup"</span></pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 2 &mdash; Добавление remote и push</div>
+                <div class="code-block">
+<pre><span class="cm"># Создайте репозиторий на GitHub (без README, без .gitignore)</span>
+<span class="cm"># Затем привяжите remote:</span>
+<span class="fn">git remote</span> add origin <span class="st">git@github.com:your-user/my-app.git</span>
+<span class="fn">git push</span> <span class="fl">-u</span> origin main</pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 3 &mdash; Создание feature-ветки</div>
+                <div class="code-block">
+<pre><span class="cm"># Создаём ветку и переключаемся на неё</span>
+<span class="fn">git switch</span> <span class="fl">-c</span> feature/add-homepage
+
+<span class="cm"># Создаём файл</span>
+<span class="fn">echo</span> <span class="st">"&lt;h1&gt;Welcome&lt;/h1&gt;"</span> > index.html
+
+<span class="cm"># Коммитим</span>
+<span class="fn">git add</span> index.html
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat: add homepage with welcome message"</span></pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 4 &mdash; Push и создание Pull Request</div>
+                <div class="code-block">
+<pre><span class="cm"># Пушим feature-ветку</span>
+<span class="fn">git push</span> <span class="fl">-u</span> origin feature/add-homepage
+
+<span class="cm"># На GitHub/GitLab:</span>
+<span class="cm"># 1. Перейдите в репозиторий</span>
+<span class="cm"># 2. Нажмите "Compare & pull request"</span>
+<span class="cm"># 3. Заполните описание</span>
+<span class="cm"># 4. Назначьте ревьюера</span>
+<span class="cm"># 5. Создайте PR</span></pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 5 &mdash; Имитация конфликта</div>
+                <div class="code-block">
+<pre><span class="cm"># Вернёмся на main и изменим тот же файл</span>
+<span class="fn">git switch</span> main
+
+<span class="cm"># Создадим другую версию index.html</span>
+<span class="fn">echo</span> <span class="st">"&lt;h1&gt;Hello World&lt;/h1&gt;"</span> > index.html
+<span class="fn">git add</span> index.html
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"feat: add alternative homepage"</span></pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 6 &mdash; Слияние с конфликтом</div>
+                <div class="code-block">
+<pre><span class="cm"># Попытка слить feature-ветку</span>
+<span class="fn">git merge</span> feature/add-homepage
+
+<span class="cm"># Git сообщит о конфликте в index.html</span>
+<span class="cm"># CONFLICT (add/add): Merge conflict in index.html</span>
+
+<span class="cm"># Посмотрим конфликт</span>
+<span class="fn">cat</span> index.html
+<span class="cm"># <<<<<<< HEAD</span>
+<span class="cm"># <h1>Hello World</h1></span>
+<span class="cm"># =======</span>
+<span class="cm"># <h1>Welcome</h1></span>
+<span class="cm"># >>>>>>> feature/add-homepage</span></pre>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">Шаг 7 &mdash; Разрешение конфликта и завершение merge</div>
+                <div class="code-block">
+<pre><span class="cm"># Редактируем файл, оставляя нужную версию:</span>
+<span class="fn">echo</span> <span class="st">"&lt;h1&gt;Welcome to My App&lt;/h1&gt;"</span> > index.html
+
+<span class="cm"># Помечаем конфликт как разрешённый</span>
+<span class="fn">git add</span> index.html
+
+<span class="cm"># Завершаем merge</span>
+<span class="fn">git commit</span> <span class="fl">-m</span> <span class="st">"merge: resolve conflict in homepage"</span>
+
+<span class="cm"># Проверяем историю</span>
+<span class="fn">git log</span> <span class="fl">--oneline --graph --all</span>
+
+<span class="cm"># Удаляем ненужную ветку</span>
+<span class="fn">git branch</span> <span class="fl">-d</span> feature/add-homepage
+
+<span class="cm"># Пушим результат</span>
+<span class="fn">git push</span> origin main</pre>
+                </div>
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ПРАКТИКА                                                           -->
+            <!-- ================================================================== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li><strong>Основы:</strong> создайте локальный репозиторий, добавьте три файла, сделайте коммит для каждого. Затем используйте <code>git log --oneline</code> для просмотра истории и <code>git show</code> для изучения деталей каждого коммита.</li>
+                    <li><strong>Ветвление:</strong> создайте две feature-ветки из <code>main</code>. В каждой измените один и тот же файл на разных строках. Слейте обе ветки в <code>main</code> по очереди. Убедитесь, что автоматическое слияние прошло успешно.</li>
+                    <li><strong>Конфликт:</strong> намеренно создайте конфликт слияния: измените одну и ту же строку в двух ветках. Разрешите конфликт вручную. Повторите с <code>git rebase</code> вместо <code>git merge</code>.</li>
+                    <li><strong>Stash и bisect:</strong> внесите изменения, сохраните их через <code>git stash</code>, переключитесь на другую ветку, вернитесь и восстановите. Затем потренируйте <code>git bisect</code>: создайте 10 коммитов, в одном из которых &laquo;сломайте&raquo; файл, и найдите виновный коммит.</li>
+                    <li><strong>Conventional Commits:</strong> оформите 5 коммитов по стандарту Conventional Commits, используя разные типы (<code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>ci</code>). Запушьте feature-ветку и создайте Pull Request на GitHub.</li>
+                </ol>
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  РЕСУРСЫ                                                            -->
+            <!-- ================================================================== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://learngitbranching.js.org/?locale=ru_RU" target="_blank">Learn Git Branching</a>
+                        <div class="res-desc">Интерактивный визуальный тренажёр ветвления и команд Git. Поддерживает русский язык.</div>
+                    </li>
+                    <li>
+                        <a href="https://git-scm.com/book/ru/v2" target="_blank">Pro Git (книга)</a>
+                        <div class="res-desc">Официальная бесплатная книга по Git от Скотта Чакона и Бена Штрауба. Полный справочник на русском.</div>
+                    </li>
+                    <li>
+                        <a href="https://www.conventionalcommits.org/ru/v1.0.0/" target="_blank">Conventional Commits</a>
+                        <div class="res-desc">Спецификация стандарта Conventional Commits с примерами и описанием на русском языке.</div>
+                    </li>
+                    <li>
+                        <a href="https://ohshitgit.com/" target="_blank">Oh Shit, Git!?!</a>
+                        <div class="res-desc">Практические решения для типичных проблем с Git: откатить коммит, исправить ошибку, восстановить потерянное.</div>
+                    </li>
+                    <li>
+                        <a href="https://nvie.com/posts/a-successful-git-branching-model/" target="_blank">A Successful Git Branching Model</a>
+                        <div class="res-desc">Оригинальная статья Винсента Дриссена о модели Git Flow.</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ================================================================== -->
+            <!--  ОТМЕТИТЬ ВЫПОЛНЕННЫМ                                               -->
+            <!-- ================================================================== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="git">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ================================================================== -->
+            <!--  НАВИГАЦИЯ                                                          -->
+            <!-- ================================================================== -->
+            <nav class="bottom-nav">
+                <a href="network.html" class="prev">
+                    <div class="nav-label">Назад</div>
+                    <div class="nav-title">Сети</div>
+                </a>
+                <a href="scripting.html" class="next">
+                    <div class="nav-label">Далее</div>
+                    <div class="nav-title">Bash &amp; Python</div>
+                </a>
+            </nav>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>

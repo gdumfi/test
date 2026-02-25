@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terraform — DevOps Roadmap</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="../index.html" class="header-logo">&larr; DevOps Roadmap</a>
+            <span class="header-title">Terraform</span>
+            <span class="header-progress" id="headerProgress"></span>
+        </div>
+    </header>
+    <main class="container">
+        <div class="page-content">
+
+            <h1>Terraform</h1>
+            <p class="subtitle">Infrastructure as Code &mdash; декларативное управление инфраструктурой любого облачного провайдера через код, версионируемый в Git</p>
+
+            <!-- ===== ВВЕДЕНИЕ ===== -->
+            <div class="section">
+                <div class="section-label">Введение</div>
+                <h2>Что такое Infrastructure as Code</h2>
+
+                <p>Infrastructure as Code (IaC) &mdash; это подход, при котором инфраструктура описывается в виде конфигурационных файлов, а не создаётся вручную через веб-консоль или CLI-команды. Вместо того чтобы заходить в AWS Console и нажимать кнопки для создания VPC, подсетей, серверов и баз данных, инженер описывает желаемое состояние инфраструктуры в текстовых файлах, которые затем применяются автоматически. Это радикально меняет подход к управлению инфраструктурой: конфигурация становится воспроизводимой, версионируемой и проверяемой. Если сервер вышел из строя или нужно развернуть идентичное окружение, достаточно выполнить одну команду &mdash; вся инфраструктура будет воссоздана точно в том виде, в котором она описана в коде.</p>
+
+                <p>Главные преимущества IaC &mdash; это воспроизводимость, версионирование и автоматизация. Воспроизводимость означает, что одну и ту же инфраструктуру можно поднять сколько угодно раз без расхождений: dev, staging и production окружения будут идентичны. Версионирование через Git позволяет отслеживать каждое изменение инфраструктуры, делать code review, откатываться к предыдущим версиям и понимать, кто, когда и зачем внёс изменение. Автоматизация устраняет человеческий фактор: больше нет ситуации, когда кто-то забыл открыть порт в Security Group или настроил подсеть не с тем CIDR. Всё описано в коде, код проверяется автоматически, и применяется одинаково каждый раз.</p>
+
+                <p>Среди инструментов IaC Terraform занимает особое место. В отличие от <strong>AWS CloudFormation</strong>, который работает только с AWS, Terraform &mdash; мультиоблачный инструмент, поддерживающий AWS, GCP, Azure, Kubernetes, GitHub, Datadog и сотни других провайдеров. <strong>Pulumi</strong> позволяет описывать инфраструктуру на обычных языках программирования (Python, TypeScript, Go), но Terraform использует собственный декларативный язык <strong>HCL</strong> (HashiCorp Configuration Language), специально разработанный для описания инфраструктуры. Terraform создан компанией HashiCorp и долгое время распространялся под открытой лицензией MPL 2.0. В 2023 году HashiCorp перевёл Terraform на лицензию BSL, что привело к созданию открытого форка <strong>OpenTofu</strong> под эгидой Linux Foundation. OpenTofu полностью совместим с Terraform и может использоваться как замена в проектах, где критична открытая лицензия.</p>
+            </div>
+
+            <!-- ===== ОСНОВНЫЕ КОНЦЕПЦИИ ===== -->
+            <div class="section">
+                <div class="section-label">Ключевые концепции</div>
+                <h2>Основные концепции</h2>
+
+                <p>Terraform оперирует набором фундаментальных абстракций, понимание которых необходимо для эффективной работы с инструментом. Каждая абстракция выполняет свою роль в описании и управлении инфраструктурой: провайдеры подключают Terraform к облачным платформам, ресурсы описывают конкретные объекты инфраструктуры, переменные параметризуют конфигурацию, а модули организуют код в переиспользуемые компоненты. Все эти элементы работают вместе, образуя декларативную систему, в которой инженер описывает желаемое состояние, а Terraform вычисляет и применяет необходимые изменения.</p>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>Provider</h3>
+                        <p>Провайдер &mdash; это плагин, который позволяет Terraform взаимодействовать с конкретной платформой или сервисом. Провайдер AWS знает, как создавать EC2-инстансы, S3-бакеты, VPC и сотни других ресурсов через AWS API. Провайдер Google Cloud работает с GCE, GKE, Cloud SQL. Существуют провайдеры для Kubernetes, Docker, GitHub, Cloudflare, Datadog и множества других сервисов. Каждый провайдер требует настройки аутентификации &mdash; ключей доступа, сервисных аккаунтов или токенов.</p>
+                        <p>Провайдеры загружаются автоматически при выполнении <code>terraform init</code> и хранятся в директории <code>.terraform/</code>. Версию провайдера рекомендуется закреплять в блоке <code>required_providers</code>, чтобы избежать неожиданных изменений при обновлении.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Resource</h3>
+                        <p>Ресурс &mdash; это основной строительный блок Terraform. Каждый ресурс описывает один объект инфраструктуры: виртуальную машину, базу данных, DNS-запись, правило файрвола. Ресурс определяется типом (например, <code>aws_instance</code>, <code>aws_s3_bucket</code>) и уникальным именем в рамках конфигурации. Terraform отслеживает жизненный цикл каждого ресурса: создание, обновление, удаление. Если вы изменяете параметры ресурса в коде, Terraform вычисляет минимальный набор изменений, необходимый для приведения реального состояния в соответствие с желаемым.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Data Source</h3>
+                        <p>Data source позволяет получить информацию о существующих ресурсах, которые не управляются текущей конфигурацией Terraform. Например, вы можете получить ID существующей VPC, узнать последний AMI Amazon Linux или прочитать информацию о DNS-зоне в Route53. Data sources не создают и не изменяют ресурсы &mdash; они только читают данные. Это необходимо, когда часть инфраструктуры управляется другой командой или была создана вручную, но вам нужно ссылаться на неё в своей конфигурации.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Variable</h3>
+                        <p>Переменные параметризуют конфигурацию, позволяя использовать один и тот же код для разных окружений. Вместо того чтобы хардкодить тип инстанса <code>t3.micro</code>, вы объявляете переменную <code>instance_type</code> со значением по умолчанию и переопределяете его для production. Переменные имеют тип (<code>string</code>, <code>number</code>, <code>bool</code>, <code>list</code>, <code>map</code>, <code>object</code>), описание и опциональное значение по умолчанию. Значения передаются через файлы <code>.tfvars</code>, переменные окружения <code>TF_VAR_*</code> или флаг <code>-var</code> командной строки.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Output</h3>
+                        <p>Выходные значения (outputs) &mdash; это способ экспортировать данные из конфигурации Terraform. После применения конфигурации Terraform выведет значения всех объявленных outputs: IP-адреса серверов, DNS-имена балансировщиков, ARN-ы ресурсов. Outputs также используются для передачи данных между модулями: один модуль создаёт VPC и экспортирует его ID через output, другой модуль импортирует это значение и использует для создания подсетей.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Local</h3>
+                        <p>Локальные значения (locals) &mdash; это именованные выражения, которые позволяют избежать повторения сложных вычислений. Если одно и то же выражение используется в нескольких местах (например, формирование тегов ресурсов или конкатенация строк), его лучше вынести в <code>locals</code> блок. Это повышает читаемость кода и упрощает его поддержку.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Module</h3>
+                        <p>Модуль &mdash; это контейнер для нескольких ресурсов, которые используются вместе. Любая директория с <code>.tf</code> файлами является модулем. Модули позволяют переиспользовать код: вместо того чтобы копировать описание VPC в каждый проект, вы создаёте модуль VPC и вызываете его с разными параметрами. Terraform Registry содержит тысячи готовых модулей для типовых задач.</p>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Пример: основные блоки Terraform</div>
+                    <pre><code><span class="cm"># Провайдер</span>
+<span class="kw">terraform</span> {
+  <span class="kw">required_providers</span> {
+    <span class="fn">aws</span> = {
+      <span class="fn">source</span>  = <span class="st">"hashicorp/aws"</span>
+      <span class="fn">version</span> = <span class="st">"~&gt; 5.0"</span>
+    }
+  }
+}
+
+<span class="kw">provider</span> <span class="st">"aws"</span> {
+  <span class="fn">region</span> = <span class="fn">var</span>.aws_region
+}
+
+<span class="cm"># Переменная</span>
+<span class="kw">variable</span> <span class="st">"aws_region"</span> {
+  <span class="fn">description</span> = <span class="st">"AWS region"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+  <span class="fn">default</span>     = <span class="st">"eu-central-1"</span>
+}
+
+<span class="cm"># Data source — получить последний AMI Amazon Linux</span>
+<span class="kw">data</span> <span class="st">"aws_ami"</span> <span class="st">"amazon_linux"</span> {
+  <span class="fn">most_recent</span> = <span class="fl">true</span>
+  <span class="fn">owners</span>      = [<span class="st">"amazon"</span>]
+
+  <span class="kw">filter</span> {
+    <span class="fn">name</span>   = <span class="st">"name"</span>
+    <span class="fn">values</span> = [<span class="st">"al2023-ami-*-x86_64"</span>]
+  }
+}
+
+<span class="cm"># Ресурс</span>
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"web"</span> {
+  <span class="fn">ami</span>           = <span class="fn">data</span>.aws_ami.amazon_linux.id
+  <span class="fn">instance_type</span> = <span class="st">"t3.micro"</span>
+
+  <span class="fn">tags</span> = {
+    <span class="fn">Name</span> = <span class="st">"web-server"</span>
+  }
+}
+
+<span class="cm"># Locals</span>
+<span class="kw">locals</span> {
+  <span class="fn">common_tags</span> = {
+    <span class="fn">Environment</span> = <span class="fn">var</span>.environment
+    <span class="fn">ManagedBy</span>   = <span class="st">"terraform"</span>
+  }
+}
+
+<span class="cm"># Output</span>
+<span class="kw">output</span> <span class="st">"instance_ip"</span> {
+  <span class="fn">description</span> = <span class="st">"Public IP of the web server"</span>
+  <span class="fn">value</span>       = <span class="fn">aws_instance</span>.web.public_ip
+}</code></pre>
+                </div>
+
+                <h3>State (файл состояния)</h3>
+
+                <p>State &mdash; одна из самых важных и часто недопонимаемых концепций Terraform. Файл состояния (<code>terraform.tfstate</code>) &mdash; это JSON-файл, в котором Terraform хранит маппинг между ресурсами, описанными в коде, и реальными ресурсами в облаке. Когда вы создаёте EC2-инстанс, Terraform записывает в state его ID, IP-адрес, все параметры и метаданные. При следующем запуске <code>terraform plan</code> Terraform сравнивает три вещи: код (желаемое состояние), state (последнее известное состояние) и реальное состояние в облаке. На основе этого сравнения он вычисляет необходимые изменения.</p>
+
+                <p>Файл состояния критически важен: если он потерян, Terraform не знает, какие ресурсы уже созданы, и попытается создать их заново, что приведёт к дублированию или ошибкам. Если state рассинхронизирован с реальностью (например, кто-то удалил ресурс вручную через консоль), Terraform обнаружит расхождение и предложит его устранить. Именно поэтому state нельзя редактировать вручную и необходимо хранить в удалённом бэкенде с блокировкой, чтобы два инженера не могли одновременно применять изменения.</p>
+            </div>
+
+            <!-- ===== ЯЗЫК HCL ===== -->
+            <div class="section">
+                <div class="section-label">Синтаксис</div>
+                <h2>Язык HCL</h2>
+
+                <p>HCL (HashiCorp Configuration Language) &mdash; это декларативный язык конфигурации, разработанный специально для описания инфраструктуры. В отличие от JSON или YAML, HCL предлагает удобный синтаксис с поддержкой комментариев, выражений, функций и условных конструкций. Код на HCL легко читается человеком и при этом достаточно выразителен для описания сложных инфраструктурных сценариев. Основная единица HCL &mdash; это блок, определяемый типом, метками и телом в фигурных скобках.</p>
+
+                <p>Файлы Terraform имеют расширение <code>.tf</code> и содержат блоки различных типов: <code>resource</code>, <code>variable</code>, <code>output</code>, <code>data</code>, <code>provider</code>, <code>terraform</code>, <code>locals</code>, <code>module</code>. Все <code>.tf</code> файлы в одной директории обрабатываются вместе как единая конфигурация &mdash; порядок файлов и блоков внутри файлов не имеет значения. Принято разделять код по файлам по смыслу: <code>main.tf</code> для ресурсов, <code>variables.tf</code> для переменных, <code>outputs.tf</code> для выходных значений, <code>providers.tf</code> для настроек провайдеров.</p>
+
+                <h3>Ссылки и интерполяция</h3>
+
+                <p>В HCL можно ссылаться на атрибуты других ресурсов с помощью синтаксиса <code>тип.имя.атрибут</code>. Например, <code>aws_vpc.main.id</code> вернёт ID созданной VPC. Terraform автоматически выстраивает граф зависимостей на основе этих ссылок: если подсеть ссылается на VPC, Terraform создаст VPC первой. Строковая интерполяция выполняется через синтаксис <code>${...}</code> внутри строк: <code>"Hello, ${var.name}"</code>. Однако в современном Terraform интерполяция для простых ссылок не нужна &mdash; можно писать просто <code>var.name</code> как аргумент.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Ссылки между ресурсами</div>
+                    <pre><code><span class="kw">resource</span> <span class="st">"aws_vpc"</span> <span class="st">"main"</span> {
+  <span class="fn">cidr_block</span> = <span class="st">"10.0.0.0/16"</span>
+}
+
+<span class="kw">resource</span> <span class="st">"aws_subnet"</span> <span class="st">"public"</span> {
+  <span class="fn">vpc_id</span>     = <span class="fn">aws_vpc</span>.main.id        <span class="cm"># ссылка на VPC</span>
+  <span class="fn">cidr_block</span> = <span class="st">"10.0.1.0/24"</span>
+}
+
+<span class="cm"># Интерполяция в строках</span>
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"web"</span> {
+  <span class="fn">tags</span> = {
+    <span class="fn">Name</span> = <span class="st">"web-${var.environment}"</span>    <span class="cm"># интерполяция переменной</span>
+  }
+}</code></pre>
+                </div>
+
+                <h3>Функции</h3>
+
+                <p>HCL предоставляет богатую библиотеку встроенных функций для обработки данных. Функции покрывают работу со строками, коллекциями, файловой системой, кодированием, хэшированием и IP-адресами. Вот наиболее часто используемые функции:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Функция</th>
+                                <th>Назначение</th>
+                                <th>Пример</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>lookup</code></td>
+                                <td>Получить значение из map по ключу</td>
+                                <td><code>lookup(var.amis, var.region, "default")</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>merge</code></td>
+                                <td>Объединить несколько map в один</td>
+                                <td><code>merge(local.common_tags, { Name = "web" })</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>concat</code></td>
+                                <td>Объединить несколько списков</td>
+                                <td><code>concat(var.public_subnets, var.private_subnets)</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>format</code></td>
+                                <td>Форматирование строки (аналог printf)</td>
+                                <td><code>format("arn:aws:s3:::%s/*", var.bucket)</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>file</code></td>
+                                <td>Прочитать содержимое файла</td>
+                                <td><code>file("${path.module}/init.sh")</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>templatefile</code></td>
+                                <td>Отрендерить шаблон с переменными</td>
+                                <td><code>templatefile("user_data.tpl", { port = 8080 })</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>length</code></td>
+                                <td>Длина списка, map или строки</td>
+                                <td><code>length(var.availability_zones)</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cidrsubnet</code></td>
+                                <td>Вычислить подсеть из CIDR блока</td>
+                                <td><code>cidrsubnet("10.0.0.0/16", 8, 1)</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Условные конструкции: count и for_each</h3>
+
+                <p>Terraform предоставляет два мета-аргумента для условного создания ресурсов и итерации: <code>count</code> и <code>for_each</code>. Мета-аргумент <code>count</code> принимает число и создаёт указанное количество экземпляров ресурса. В сочетании с тернарным оператором <code>condition ? true_val : false_val</code> он позволяет условно создавать ресурсы: <code>count = var.create_bastion ? 1 : 0</code> создаст bastion-хост только если переменная истинна. Каждый экземпляр доступен по индексу: <code>aws_instance.web[0]</code>.</p>
+
+                <p>Мета-аргумент <code>for_each</code> более гибкий: он принимает map или set строк и создаёт по одному экземпляру для каждого элемента. В отличие от <code>count</code>, при использовании <code>for_each</code> экземпляры идентифицируются по ключу, а не по индексу. Это значит, что удаление элемента из середины набора не вызовет пересоздание остальных ресурсов &mdash; важное преимущество для production-инфраструктуры.</p>
+
+                <div class="code-block">
+                    <div class="code-header">count и for_each</div>
+                    <pre><code><span class="cm"># count — условное создание ресурса</span>
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"bastion"</span> {
+  <span class="fn">count</span>         = <span class="fn">var</span>.create_bastion ? <span class="fl">1</span> : <span class="fl">0</span>
+  <span class="fn">ami</span>           = <span class="fn">data</span>.aws_ami.amazon_linux.id
+  <span class="fn">instance_type</span> = <span class="st">"t3.micro"</span>
+}
+
+<span class="cm"># for_each — создание ресурсов из map</span>
+<span class="kw">variable</span> <span class="st">"subnets"</span> {
+  <span class="fn">default</span> = {
+    <span class="fn">public-a</span>  = <span class="st">"10.0.1.0/24"</span>
+    <span class="fn">public-b</span>  = <span class="st">"10.0.2.0/24"</span>
+    <span class="fn">private-a</span> = <span class="st">"10.0.10.0/24"</span>
+  }
+}
+
+<span class="kw">resource</span> <span class="st">"aws_subnet"</span> <span class="st">"this"</span> {
+  <span class="fn">for_each</span>   = <span class="fn">var</span>.subnets
+  <span class="fn">vpc_id</span>     = <span class="fn">aws_vpc</span>.main.id
+  <span class="fn">cidr_block</span> = <span class="fn">each</span>.value          <span class="cm"># значение из map</span>
+
+  <span class="fn">tags</span> = {
+    <span class="fn">Name</span> = <span class="fn">each</span>.key              <span class="cm"># ключ из map</span>
+  }
+}</code></pre>
+                </div>
+
+                <h3>Dynamic blocks</h3>
+
+                <p>Dynamic blocks позволяют генерировать повторяющиеся вложенные блоки внутри ресурса. Это особенно полезно для Security Groups, где количество правил может варьироваться, или для настроек балансировщиков нагрузки. Без dynamic blocks пришлось бы дублировать блоки <code>ingress</code> вручную для каждого порта. Dynamic block итерирует по коллекции и генерирует вложенный блок для каждого элемента.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Dynamic block</div>
+                    <pre><code><span class="kw">variable</span> <span class="st">"ingress_ports"</span> {
+  <span class="fn">default</span> = [<span class="fl">22</span>, <span class="fl">80</span>, <span class="fl">443</span>]
+}
+
+<span class="kw">resource</span> <span class="st">"aws_security_group"</span> <span class="st">"web"</span> {
+  <span class="fn">name</span>   = <span class="st">"web-sg"</span>
+  <span class="fn">vpc_id</span> = <span class="fn">aws_vpc</span>.main.id
+
+  <span class="kw">dynamic</span> <span class="st">"ingress"</span> {
+    <span class="fn">for_each</span> = <span class="fn">var</span>.ingress_ports
+    <span class="kw">content</span> {
+      <span class="fn">from_port</span>   = <span class="fn">ingress</span>.value
+      <span class="fn">to_port</span>     = <span class="fn">ingress</span>.value
+      <span class="fn">protocol</span>    = <span class="st">"tcp"</span>
+      <span class="fn">cidr_blocks</span> = [<span class="st">"0.0.0.0/0"</span>]
+    }
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- ===== РАБОЧИЙ ЦИКЛ ===== -->
+            <div class="section">
+                <div class="section-label">Workflow</div>
+                <h2>Рабочий цикл</h2>
+
+                <p>Работа с Terraform строится вокруг четырёх основных команд, которые образуют цикл: <code>init</code>, <code>plan</code>, <code>apply</code> и <code>destroy</code>. Этот цикл повторяется каждый раз при внесении изменений в инфраструктуру. Понимание того, что делает каждая команда внутри, помогает диагностировать ошибки, оптимизировать производительность и избегать потенциально опасных действий.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Основные команды Terraform</div>
+                    <pre><code><span class="cm"># 1. Инициализация — скачивание провайдеров и модулей</span>
+<span class="fn">terraform</span> init
+
+<span class="cm"># 2. Планирование — что будет изменено (без реальных изменений)</span>
+<span class="fn">terraform</span> plan
+
+<span class="cm"># 3. Применение — создание/изменение ресурсов</span>
+<span class="fn">terraform</span> apply
+
+<span class="cm"># 4. Уничтожение — удаление всех управляемых ресурсов</span>
+<span class="fn">terraform</span> destroy</code></pre>
+                </div>
+
+                <h3>terraform init</h3>
+                <p>Команда <code>terraform init</code> выполняется первой в любом новом проекте или после изменения провайдеров и модулей. Она выполняет три ключевых действия: инициализирует бэкенд для хранения state, загружает и устанавливает провайдеры указанных версий, загружает внешние модули. Провайдеры скачиваются из Terraform Registry и кэшируются в директории <code>.terraform/</code>. Файл <code>.terraform.lock.hcl</code> фиксирует точные версии и хэши провайдеров для воспроизводимости &mdash; его необходимо коммитить в Git.</p>
+
+                <h3>terraform plan</h3>
+                <p>Команда <code>terraform plan</code> &mdash; это preview изменений, который не модифицирует реальную инфраструктуру. Terraform читает текущий state, опрашивает облачный провайдер для получения актуального состояния ресурсов, сравнивает его с кодом и выводит список необходимых изменений. В выводе используются символы: <code>+</code> (создание), <code>-</code> (удаление), <code>~</code> (изменение на месте), <code>-/+</code> (пересоздание). Пересоздание означает, что ресурс будет удалён и создан заново &mdash; это может быть опасно для stateful-ресурсов (базы данных, диски). Всегда проверяйте план перед применением.</p>
+
+                <h3>terraform apply</h3>
+                <p>Команда <code>terraform apply</code> выполняет план и вносит реальные изменения в инфраструктуру. По умолчанию она запрашивает подтверждение (вы должны ввести <code>yes</code>). Флаг <code>-auto-approve</code> пропускает подтверждение &mdash; его используют в CI/CD пайплайнах, но никогда для ручного применения в production. Рекомендуемый подход: сначала сохранить план в файл (<code>terraform plan -out=tfplan</code>), проверить его, а затем применить именно этот план (<code>terraform apply tfplan</code>). Это гарантирует, что будут применены ровно те изменения, которые вы видели.</p>
+
+                <h3>terraform destroy</h3>
+                <p>Команда <code>terraform destroy</code> удаляет все ресурсы, управляемые текущей конфигурацией. Это необратимая операция для многих ресурсов, поэтому Terraform запрашивает явное подтверждение. В production <code>destroy</code> используется крайне редко &mdash; обычно для временных окружений (dev, тестовые стенды). Для удаления отдельного ресурса лучше удалить его из кода и применить <code>terraform apply</code>, а не уничтожать всё.</p>
+
+                <div class="note">
+                    <strong>Важно:</strong> никогда не используйте <code>-auto-approve</code> при ручном запуске в production. Всегда проверяйте план перед применением. Одна ошибка в конфигурации может привести к удалению базы данных или пересозданию инстансов с потерей данных.
+                </div>
+            </div>
+
+            <!-- ===== STATE MANAGEMENT ===== -->
+            <div class="section">
+                <div class="section-label">Управление состоянием</div>
+                <h2>State Management</h2>
+
+                <p>По умолчанию Terraform хранит state в локальном файле <code>terraform.tfstate</code> в рабочей директории. Для индивидуальной разработки и обучения это допустимо, но для командной работы локальный state &mdash; источник проблем. Если два инженера одновременно выполнят <code>terraform apply</code>, каждый перезапишет state другого, что приведёт к рассинхронизации с реальной инфраструктурой. Удалённый бэкенд решает эту проблему: state хранится в централизованном хранилище, а механизм блокировки (locking) гарантирует, что только один процесс может изменять state в любой момент времени.</p>
+
+                <p>Наиболее популярные удалённые бэкенды &mdash; это <strong>S3 + DynamoDB</strong> для AWS, <strong>GCS</strong> для Google Cloud, <strong>Azure Blob Storage</strong> для Azure и <strong>Terraform Cloud</strong> как универсальное SaaS-решение. В случае AWS state хранится в S3-бакете (с включённым версионированием для возможности отката), а DynamoDB-таблица обеспечивает блокировку &mdash; при запуске <code>terraform apply</code> создаётся запись в DynamoDB, которая не позволяет другому процессу начать изменения до завершения текущего.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Конфигурация удалённого бэкенда (S3)</div>
+                    <pre><code><span class="kw">terraform</span> {
+  <span class="kw">backend</span> <span class="st">"s3"</span> {
+    <span class="fn">bucket</span>         = <span class="st">"my-terraform-state"</span>
+    <span class="fn">key</span>            = <span class="st">"prod/network/terraform.tfstate"</span>
+    <span class="fn">region</span>         = <span class="st">"eu-central-1"</span>
+    <span class="fn">dynamodb_table</span> = <span class="st">"terraform-locks"</span>
+    <span class="fn">encrypt</span>        = <span class="fl">true</span>
+  }
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Конфигурация бэкенда GCS (Google Cloud)</div>
+                    <pre><code><span class="kw">terraform</span> {
+  <span class="kw">backend</span> <span class="st">"gcs"</span> {
+    <span class="fn">bucket</span> = <span class="st">"my-terraform-state"</span>
+    <span class="fn">prefix</span> = <span class="st">"prod/network"</span>
+  }
+}</code></pre>
+                </div>
+
+                <h3>Команды terraform state</h3>
+
+                <p>Terraform предоставляет набор команд для управления state, которые используются в исключительных ситуациях: рефакторинг кода (переименование ресурсов), импорт существующей инфраструктуры, удаление ресурсов из-под управления Terraform. Эти команды изменяют state напрямую, поэтому перед их использованием всегда делайте резервную копию state-файла.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Команды управления state</div>
+                    <pre><code><span class="cm"># Показать все ресурсы в state</span>
+<span class="fn">terraform</span> state list
+
+<span class="cm"># Показать детали конкретного ресурса</span>
+<span class="fn">terraform</span> state show aws_instance.web
+
+<span class="cm"># Переименовать ресурс в state (после рефакторинга кода)</span>
+<span class="fn">terraform</span> state mv aws_instance.web aws_instance.app
+
+<span class="cm"># Удалить ресурс из state (ресурс останется в облаке)</span>
+<span class="fn">terraform</span> state rm aws_instance.legacy
+
+<span class="cm"># Скачать state из удалённого бэкенда</span>
+<span class="fn">terraform</span> state pull &gt; backup.tfstate
+
+<span class="cm"># Загрузить state в удалённый бэкенд</span>
+<span class="fn">terraform</span> state push backup.tfstate
+
+<span class="cm"># Импорт существующего ресурса в Terraform</span>
+<span class="fn">terraform</span> import aws_instance.web i-0123456789abcdef0</code></pre>
+                </div>
+
+                <div class="note">
+                    <strong>Правило:</strong> никогда не редактируйте файл <code>terraform.tfstate</code> вручную в текстовом редакторе. State содержит внутренние идентификаторы, хэши и метаданные, которые при ручном изменении могут привести к необратимому повреждению. Используйте только команды <code>terraform state</code> для работы со state.
+                </div>
+            </div>
+
+            <!-- ===== МОДУЛИ ===== -->
+            <div class="section">
+                <div class="section-label">Модульность</div>
+                <h2>Модули</h2>
+
+                <p>По мере роста инфраструктуры код Terraform неизбежно становится сложным. Если все ресурсы описаны в одном наборе файлов, конфигурация превращается в монолит: трудно читать, трудно менять, невозможно переиспользовать. Модули решают эту проблему, применяя принцип DRY (Don't Repeat Yourself) к инфраструктурному коду. Модуль &mdash; это самостоятельный пакет Terraform-конфигурации, который принимает входные параметры (variables), создаёт набор связанных ресурсов и экспортирует результаты (outputs). Вы описываете модуль один раз и вызываете его сколько угодно раз с разными параметрами.</p>
+
+                <p>Любая директория с <code>.tf</code> файлами в Terraform является модулем. Директория, в которой вы запускаете <code>terraform apply</code>, называется <strong>корневым модулем</strong> (root module). Модули, вызываемые из корневого, называются <strong>дочерними модулями</strong> (child modules). Типичная структура модуля включает три файла: <code>variables.tf</code> (входные параметры), <code>main.tf</code> (ресурсы) и <code>outputs.tf</code> (выходные значения). Хорошая практика &mdash; также добавлять <code>README.md</code> с описанием модуля и <code>versions.tf</code> с ограничениями версий провайдеров.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Структура модуля</div>
+                    <pre><code>modules/
+  vpc/
+    variables.tf     <span class="cm"># входные параметры модуля</span>
+    main.tf          <span class="cm"># ресурсы: VPC, подсети, IGW, NAT</span>
+    outputs.tf       <span class="cm"># выходные значения: vpc_id, subnet_ids</span>
+  ec2/
+    variables.tf
+    main.tf
+    outputs.tf</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Вызов модуля</div>
+                    <pre><code><span class="cm"># Локальный модуль</span>
+<span class="kw">module</span> <span class="st">"vpc"</span> {
+  <span class="fn">source</span> = <span class="st">"./modules/vpc"</span>
+
+  <span class="fn">vpc_cidr</span>     = <span class="st">"10.0.0.0/16"</span>
+  <span class="fn">environment</span>  = <span class="st">"production"</span>
+  <span class="fn">project_name</span> = <span class="st">"myapp"</span>
+}
+
+<span class="cm"># Модуль из Terraform Registry</span>
+<span class="kw">module</span> <span class="st">"vpc"</span> {
+  <span class="fn">source</span>  = <span class="st">"terraform-aws-modules/vpc/aws"</span>
+  <span class="fn">version</span> = <span class="st">"5.1.0"</span>
+
+  <span class="fn">name</span> = <span class="st">"my-vpc"</span>
+  <span class="fn">cidr</span> = <span class="st">"10.0.0.0/16"</span>
+
+  <span class="fn">azs</span>             = [<span class="st">"eu-central-1a"</span>, <span class="st">"eu-central-1b"</span>]
+  <span class="fn">public_subnets</span>  = [<span class="st">"10.0.1.0/24"</span>, <span class="st">"10.0.2.0/24"</span>]
+  <span class="fn">private_subnets</span> = [<span class="st">"10.0.10.0/24"</span>, <span class="st">"10.0.20.0/24"</span>]
+}
+
+<span class="cm"># Модуль из Git-репозитория</span>
+<span class="kw">module</span> <span class="st">"security"</span> {
+  <span class="fn">source</span> = <span class="st">"git::https://github.com/company/tf-modules.git//security?ref=v1.2.0"</span>
+}
+
+<span class="cm"># Использование output из модуля</span>
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"web"</span> {
+  <span class="fn">subnet_id</span> = <span class="fn">module</span>.vpc.public_subnet_ids[<span class="fl">0</span>]
+}</code></pre>
+                </div>
+
+                <p>Источники модулей могут быть разнообразными: локальный путь (<code>./modules/vpc</code>), Git-репозиторий (с указанием тега или ветки), S3-бакет или <strong>Terraform Registry</strong> &mdash; публичный каталог модулей по адресу <a href="https://registry.terraform.io/" target="_blank">registry.terraform.io</a>. В Registry доступны тысячи модулей для типовых задач: VPC, EKS-кластеры, RDS-базы данных, IAM-политики. Использование проверенных модулей из Registry ускоряет разработку, но важно проверять их код, закреплять версию и не полагаться на модули неизвестных авторов без ревью.</p>
+            </div>
+
+            <!-- ===== WORKSPACES И ОКРУЖЕНИЯ ===== -->
+            <div class="section">
+                <div class="section-label">Окружения</div>
+                <h2>Workspaces и окружения</h2>
+
+                <p>Terraform workspaces позволяют использовать одну конфигурацию для нескольких окружений (dev, staging, production), сохраняя отдельный state для каждого. При создании workspace Terraform создаёт изолированный state-файл, и все операции <code>plan</code>/<code>apply</code> применяются только к ресурсам этого workspace. Имя текущего workspace доступно через <code>terraform.workspace</code> и может использоваться для параметризации: например, выбора размера инстанса или количества реплик.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Работа с workspaces</div>
+                    <pre><code><span class="cm"># Создать и переключиться на workspace</span>
+<span class="fn">terraform</span> workspace new dev
+<span class="fn">terraform</span> workspace new staging
+<span class="fn">terraform</span> workspace new prod
+
+<span class="cm"># Список workspaces</span>
+<span class="fn">terraform</span> workspace list
+
+<span class="cm"># Переключиться на workspace</span>
+<span class="fn">terraform</span> workspace select prod
+
+<span class="cm"># Показать текущий workspace</span>
+<span class="fn">terraform</span> workspace show</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Использование workspace в конфигурации</div>
+                    <pre><code><span class="kw">locals</span> {
+  <span class="fn">instance_type</span> = {
+    <span class="fn">dev</span>     = <span class="st">"t3.micro"</span>
+    <span class="fn">staging</span> = <span class="st">"t3.small"</span>
+    <span class="fn">prod</span>    = <span class="st">"t3.large"</span>
+  }
+}
+
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"web"</span> {
+  <span class="fn">instance_type</span> = <span class="fn">local</span>.instance_type[<span class="fn">terraform</span>.workspace]
+
+  <span class="fn">tags</span> = {
+    <span class="fn">Environment</span> = <span class="fn">terraform</span>.workspace
+  }
+}</code></pre>
+                </div>
+
+                <p>Альтернативный подход &mdash; <strong>разделение по директориям</strong>, когда каждое окружение имеет собственную директорию с конфигурацией, вызывающую общие модули. Структура выглядит так: <code>environments/dev/</code>, <code>environments/staging/</code>, <code>environments/prod/</code>, каждая со своим <code>main.tf</code>, <code>terraform.tfvars</code> и настройками бэкенда. Этот подход более явный и безопасный: невозможно случайно применить production-изменения, находясь не в том workspace.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Структура с разделением по директориям</div>
+                    <pre><code>infrastructure/
+  modules/
+    vpc/
+    ec2/
+    rds/
+  environments/
+    dev/
+      main.tf              <span class="cm"># вызов модулей</span>
+      terraform.tfvars     <span class="cm"># значения для dev</span>
+      backend.tf           <span class="cm"># бэкенд для dev state</span>
+    staging/
+      main.tf
+      terraform.tfvars
+      backend.tf
+    prod/
+      main.tf
+      terraform.tfvars
+      backend.tf</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Подход</th>
+                                <th>Плюсы</th>
+                                <th>Минусы</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Workspaces</strong></td>
+                                <td>Один набор кода, меньше дублирования</td>
+                                <td>Легко ошибиться с workspace, неявное разделение</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Директории</strong></td>
+                                <td>Явное разделение, разные бэкенды, безопаснее</td>
+                                <td>Дублирование кода вызовов модулей</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Файлы <code>terraform.tfvars</code> содержат значения переменных для конкретного окружения. Terraform автоматически загружает файл <code>terraform.tfvars</code> или <code>*.auto.tfvars</code> из текущей директории. Для явного указания файла используется флаг <code>-var-file</code>: <code>terraform apply -var-file="prod.tfvars"</code>. В production-проектах принято хранить чувствительные переменные (пароли, токены) не в <code>.tfvars</code> файлах, а в менеджерах секретов (AWS Secrets Manager, HashiCorp Vault) или передавать через переменные окружения.</p>
+            </div>
+
+            <!-- ===== BEST PRACTICES ===== -->
+            <div class="section">
+                <div class="section-label">Рекомендации</div>
+                <h2>Best Practices</h2>
+
+                <p>Правильное применение лучших практик &mdash; разница между проектом, который масштабируется и поддерживается годами, и проектом, который превращается в хаос за несколько месяцев. Terraform предоставляет гибкость, но эта гибкость требует дисциплины. Ниже собраны ключевые рекомендации, выработанные сообществом и проверенные на production-инфраструктурах различного масштаба.</p>
+
+                <div class="concepts">
+                    <div class="concept">
+                        <h3>Удалённый state с блокировкой</h3>
+                        <p>Всегда используйте удалённый бэкенд для state с включённой блокировкой. Локальный state не подходит для командной работы и легко теряется. Включите версионирование бакета (S3 versioning), чтобы иметь возможность отката при повреждении state.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Модуляризация</h3>
+                        <p>Выносите связанные ресурсы в модули. Модуль VPC, модуль EC2, модуль RDS &mdash; каждый должен быть самостоятельным и переиспользуемым. Не создавайте монолитные конфигурации с сотнями ресурсов в одном state &mdash; это замедляет <code>plan</code> и увеличивает риск при каждом apply.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Закрепление версий провайдеров</h3>
+                        <p>Всегда фиксируйте версии провайдеров в блоке <code>required_providers</code> и коммитьте файл <code>.terraform.lock.hcl</code>. Без этого обновление провайдера может сломать существующую конфигурацию. Используйте constraint <code>~&gt; 5.0</code>, чтобы разрешить patch-обновления, но запретить major.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Переменные вместо хардкода</h3>
+                        <p>Никогда не хардкодьте значения, которые могут меняться между окружениями: регион, тип инстанса, размер диска, CIDR-блоки. Всё это должно быть переменными. Значения по умолчанию задавайте для dev-окружения, а для production переопределяйте через <code>.tfvars</code>.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Форматирование и валидация</h3>
+                        <p>Запускайте <code>terraform fmt</code> для автоформатирования кода и <code>terraform validate</code> для проверки синтаксиса перед каждым коммитом. Эти команды легко интегрируются в pre-commit хуки и CI/CD пайплайны. Дополнительно используйте <code>tflint</code> для проверки best practices и <code>tfsec</code>/<code>checkov</code> для анализа безопасности.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Plan перед Apply</h3>
+                        <p>Всегда запускайте <code>terraform plan</code> и внимательно изучайте вывод перед применением. Обращайте особое внимание на ресурсы с пометкой <code>must be replaced</code> &mdash; это означает пересоздание, которое может привести к простою. В CI/CD сохраняйте план в файл и применяйте именно его.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Data sources вместо хардкода ID</h3>
+                        <p>Вместо хардкода AMI ID, VPC ID или других идентификаторов используйте data sources для их динамического получения. Это делает конфигурацию портативной между аккаунтами и регионами: <code>data "aws_ami"</code> вместо <code>ami = "ami-0123456789"</code>.</p>
+                    </div>
+
+                    <div class="concept">
+                        <h3>Тегирование ресурсов</h3>
+                        <p>Назначайте теги всем ресурсам, которые их поддерживают. Минимальный набор тегов: <code>Environment</code>, <code>Project</code>, <code>ManagedBy</code>, <code>Owner</code>. Теги необходимы для учёта затрат, фильтрации ресурсов и аудита. Используйте <code>default_tags</code> в провайдере AWS для автоматического назначения тегов всем ресурсам.</p>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Пример: default_tags для автоматического тегирования</div>
+                    <pre><code><span class="kw">provider</span> <span class="st">"aws"</span> {
+  <span class="fn">region</span> = <span class="fn">var</span>.aws_region
+
+  <span class="kw">default_tags</span> {
+    <span class="fn">tags</span> = {
+      <span class="fn">Environment</span> = <span class="fn">var</span>.environment
+      <span class="fn">Project</span>     = <span class="fn">var</span>.project_name
+      <span class="fn">ManagedBy</span>   = <span class="st">"terraform"</span>
+      <span class="fn">Owner</span>       = <span class="fn">var</span>.team
+    }
+  }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- ===== ПОШАГОВЫЙ ТУТОРИАЛ ===== -->
+            <div class="section">
+                <div class="section-label">Практика</div>
+                <h2>Пошаговый туториал</h2>
+
+                <p>В этом туториале мы создадим базовую инфраструктуру в AWS с помощью Terraform: VPC с публичной подсетью, Security Group с правилами для SSH и HTTP, и EC2-инстанс. Это типичный сценарий для развёртывания простого веб-приложения. Перед началом убедитесь, что у вас установлен Terraform и настроен доступ к AWS (через <code>aws configure</code> или переменные окружения <code>AWS_ACCESS_KEY_ID</code> и <code>AWS_SECRET_ACCESS_KEY</code>).</p>
+
+                <div class="step">
+                    <div class="step-num">Шаг 1 — Создание структуры проекта</div>
+                    <p>Создадим директорию проекта и основные файлы. Мы разделим конфигурацию по файлам для лучшей организации: провайдеры, переменные, основные ресурсы и выходные значения.</p>
+                    <div class="code-block">
+                        <div class="code-header">Создание файлов проекта</div>
+                        <pre><code><span class="fn">mkdir</span> <span class="fl">-p</span> terraform-demo
+<span class="fn">cd</span> terraform-demo
+<span class="fn">touch</span> providers.tf variables.tf main.tf outputs.tf</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 2 — Настройка провайдера и переменных</div>
+                    <p>Опишем провайдер AWS с закреплённой версией и набор переменных для параметризации конфигурации.</p>
+                    <div class="code-block">
+                        <div class="code-header">providers.tf</div>
+                        <pre><code><span class="kw">terraform</span> {
+  <span class="kw">required_version</span> = <span class="st">"&gt;= 1.5"</span>
+
+  <span class="kw">required_providers</span> {
+    <span class="fn">aws</span> = {
+      <span class="fn">source</span>  = <span class="st">"hashicorp/aws"</span>
+      <span class="fn">version</span> = <span class="st">"~&gt; 5.0"</span>
+    }
+  }
+}
+
+<span class="kw">provider</span> <span class="st">"aws"</span> {
+  <span class="fn">region</span> = <span class="fn">var</span>.aws_region
+
+  <span class="kw">default_tags</span> {
+    <span class="fn">tags</span> = {
+      <span class="fn">Project</span>   = <span class="st">"terraform-demo"</span>
+      <span class="fn">ManagedBy</span> = <span class="st">"terraform"</span>
+    }
+  }
+}</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">variables.tf</div>
+                        <pre><code><span class="kw">variable</span> <span class="st">"aws_region"</span> {
+  <span class="fn">description</span> = <span class="st">"AWS region to deploy resources"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+  <span class="fn">default</span>     = <span class="st">"eu-central-1"</span>
+}
+
+<span class="kw">variable</span> <span class="st">"vpc_cidr"</span> {
+  <span class="fn">description</span> = <span class="st">"CIDR block for the VPC"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+  <span class="fn">default</span>     = <span class="st">"10.0.0.0/16"</span>
+}
+
+<span class="kw">variable</span> <span class="st">"public_subnet_cidr"</span> {
+  <span class="fn">description</span> = <span class="st">"CIDR block for the public subnet"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+  <span class="fn">default</span>     = <span class="st">"10.0.1.0/24"</span>
+}
+
+<span class="kw">variable</span> <span class="st">"instance_type"</span> {
+  <span class="fn">description</span> = <span class="st">"EC2 instance type"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+  <span class="fn">default</span>     = <span class="st">"t3.micro"</span>
+}
+
+<span class="kw">variable</span> <span class="st">"my_ip"</span> {
+  <span class="fn">description</span> = <span class="st">"Your IP for SSH access (e.g. 203.0.113.1/32)"</span>
+  <span class="fn">type</span>        = <span class="fn">string</span>
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 3 — Описание сетевых ресурсов</div>
+                    <p>Создадим VPC, публичную подсеть, Internet Gateway и таблицу маршрутизации. Это базовый сетевой каркас, необходимый для работы EC2-инстанса с публичным доступом.</p>
+                    <div class="code-block">
+                        <div class="code-header">main.tf — Сеть</div>
+                        <pre><code><span class="cm"># ===== VPC =====</span>
+<span class="kw">resource</span> <span class="st">"aws_vpc"</span> <span class="st">"main"</span> {
+  <span class="fn">cidr_block</span>           = <span class="fn">var</span>.vpc_cidr
+  <span class="fn">enable_dns_support</span>   = <span class="fl">true</span>
+  <span class="fn">enable_dns_hostnames</span> = <span class="fl">true</span>
+
+  <span class="fn">tags</span> = { <span class="fn">Name</span> = <span class="st">"demo-vpc"</span> }
+}
+
+<span class="cm"># ===== Internet Gateway =====</span>
+<span class="kw">resource</span> <span class="st">"aws_internet_gateway"</span> <span class="st">"gw"</span> {
+  <span class="fn">vpc_id</span> = <span class="fn">aws_vpc</span>.main.id
+  <span class="fn">tags</span>   = { <span class="fn">Name</span> = <span class="st">"demo-igw"</span> }
+}
+
+<span class="cm"># ===== Public Subnet =====</span>
+<span class="kw">resource</span> <span class="st">"aws_subnet"</span> <span class="st">"public"</span> {
+  <span class="fn">vpc_id</span>                  = <span class="fn">aws_vpc</span>.main.id
+  <span class="fn">cidr_block</span>              = <span class="fn">var</span>.public_subnet_cidr
+  <span class="fn">map_public_ip_on_launch</span> = <span class="fl">true</span>
+  <span class="fn">availability_zone</span>       = <span class="st">"${var.aws_region}a"</span>
+
+  <span class="fn">tags</span> = { <span class="fn">Name</span> = <span class="st">"demo-public-subnet"</span> }
+}
+
+<span class="cm"># ===== Route Table =====</span>
+<span class="kw">resource</span> <span class="st">"aws_route_table"</span> <span class="st">"public"</span> {
+  <span class="fn">vpc_id</span> = <span class="fn">aws_vpc</span>.main.id
+
+  <span class="kw">route</span> {
+    <span class="fn">cidr_block</span> = <span class="st">"0.0.0.0/0"</span>
+    <span class="fn">gateway_id</span> = <span class="fn">aws_internet_gateway</span>.gw.id
+  }
+
+  <span class="fn">tags</span> = { <span class="fn">Name</span> = <span class="st">"demo-public-rt"</span> }
+}
+
+<span class="kw">resource</span> <span class="st">"aws_route_table_association"</span> <span class="st">"public"</span> {
+  <span class="fn">subnet_id</span>      = <span class="fn">aws_subnet</span>.public.id
+  <span class="fn">route_table_id</span> = <span class="fn">aws_route_table</span>.public.id
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 4 — Security Group и EC2</div>
+                    <p>Создадим Security Group с правилами для SSH (порт 22, только с вашего IP) и HTTP (порт 80, для всех). Затем развернём EC2-инстанс с последним AMI Amazon Linux.</p>
+                    <div class="code-block">
+                        <div class="code-header">main.tf — Security Group и EC2</div>
+                        <pre><code><span class="cm"># ===== Security Group =====</span>
+<span class="kw">resource</span> <span class="st">"aws_security_group"</span> <span class="st">"web"</span> {
+  <span class="fn">name</span>        = <span class="st">"demo-web-sg"</span>
+  <span class="fn">description</span> = <span class="st">"Allow SSH and HTTP"</span>
+  <span class="fn">vpc_id</span>      = <span class="fn">aws_vpc</span>.main.id
+
+  <span class="kw">ingress</span> {
+    <span class="fn">description</span> = <span class="st">"SSH from my IP"</span>
+    <span class="fn">from_port</span>   = <span class="fl">22</span>
+    <span class="fn">to_port</span>     = <span class="fl">22</span>
+    <span class="fn">protocol</span>    = <span class="st">"tcp"</span>
+    <span class="fn">cidr_blocks</span> = [<span class="fn">var</span>.my_ip]
+  }
+
+  <span class="kw">ingress</span> {
+    <span class="fn">description</span> = <span class="st">"HTTP from anywhere"</span>
+    <span class="fn">from_port</span>   = <span class="fl">80</span>
+    <span class="fn">to_port</span>     = <span class="fl">80</span>
+    <span class="fn">protocol</span>    = <span class="st">"tcp"</span>
+    <span class="fn">cidr_blocks</span> = [<span class="st">"0.0.0.0/0"</span>]
+  }
+
+  <span class="kw">egress</span> {
+    <span class="fn">from_port</span>   = <span class="fl">0</span>
+    <span class="fn">to_port</span>     = <span class="fl">0</span>
+    <span class="fn">protocol</span>    = <span class="st">"-1"</span>
+    <span class="fn">cidr_blocks</span> = [<span class="st">"0.0.0.0/0"</span>]
+  }
+
+  <span class="fn">tags</span> = { <span class="fn">Name</span> = <span class="st">"demo-web-sg"</span> }
+}
+
+<span class="cm"># ===== AMI (Amazon Linux 2023) =====</span>
+<span class="kw">data</span> <span class="st">"aws_ami"</span> <span class="st">"amazon_linux"</span> {
+  <span class="fn">most_recent</span> = <span class="fl">true</span>
+  <span class="fn">owners</span>      = [<span class="st">"amazon"</span>]
+
+  <span class="kw">filter</span> {
+    <span class="fn">name</span>   = <span class="st">"name"</span>
+    <span class="fn">values</span> = [<span class="st">"al2023-ami-*-x86_64"</span>]
+  }
+}
+
+<span class="cm"># ===== EC2 Instance =====</span>
+<span class="kw">resource</span> <span class="st">"aws_instance"</span> <span class="st">"web"</span> {
+  <span class="fn">ami</span>                    = <span class="fn">data</span>.aws_ami.amazon_linux.id
+  <span class="fn">instance_type</span>          = <span class="fn">var</span>.instance_type
+  <span class="fn">subnet_id</span>              = <span class="fn">aws_subnet</span>.public.id
+  <span class="fn">vpc_security_group_ids</span> = [<span class="fn">aws_security_group</span>.web.id]
+
+  <span class="fn">user_data</span> = <span class="op">&lt;&lt;-EOF</span>
+    <span class="st">#!/bin/bash</span>
+    <span class="fn">yum</span> update <span class="fl">-y</span>
+    <span class="fn">yum</span> install <span class="fl">-y</span> httpd
+    <span class="fn">systemctl</span> start httpd
+    <span class="fn">systemctl</span> enable httpd
+    <span class="fn">echo</span> <span class="st">"&lt;h1&gt;Hello from Terraform!&lt;/h1&gt;"</span> &gt; /var/www/html/index.html
+  <span class="op">EOF</span>
+
+  <span class="fn">tags</span> = { <span class="fn">Name</span> = <span class="st">"demo-web-server"</span> }
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 5 — Outputs</div>
+                    <p>Определим выходные значения, чтобы после применения конфигурации увидеть IP-адрес и DNS-имя созданного инстанса.</p>
+                    <div class="code-block">
+                        <div class="code-header">outputs.tf</div>
+                        <pre><code><span class="kw">output</span> <span class="st">"instance_public_ip"</span> {
+  <span class="fn">description</span> = <span class="st">"Public IP of the web server"</span>
+  <span class="fn">value</span>       = <span class="fn">aws_instance</span>.web.public_ip
+}
+
+<span class="kw">output</span> <span class="st">"instance_public_dns"</span> {
+  <span class="fn">description</span> = <span class="st">"Public DNS of the web server"</span>
+  <span class="fn">value</span>       = <span class="fn">aws_instance</span>.web.public_dns
+}
+
+<span class="kw">output</span> <span class="st">"vpc_id"</span> {
+  <span class="fn">description</span> = <span class="st">"ID of the VPC"</span>
+  <span class="fn">value</span>       = <span class="fn">aws_vpc</span>.main.id
+}
+
+<span class="kw">output</span> <span class="st">"web_url"</span> {
+  <span class="fn">description</span> = <span class="st">"URL of the web server"</span>
+  <span class="fn">value</span>       = <span class="st">"http://${aws_instance.web.public_ip}"</span>
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">Шаг 6 — Инициализация, план и применение</div>
+                    <p>Выполним полный рабочий цикл: инициализация, проверка плана и применение. Обратите внимание на вывод <code>terraform plan</code> &mdash; он покажет все ресурсы, которые будут созданы.</p>
+                    <div class="code-block">
+                        <div class="code-header">Выполнение</div>
+                        <pre><code><span class="cm"># Инициализация — скачивание провайдера AWS</span>
+<span class="fn">terraform</span> init
+
+<span class="cm"># Форматирование кода</span>
+<span class="fn">terraform</span> fmt
+
+<span class="cm"># Валидация синтаксиса</span>
+<span class="fn">terraform</span> validate
+
+<span class="cm"># Просмотр плана (указываем свой IP)</span>
+<span class="fn">terraform</span> plan <span class="fl">-var</span> <span class="st">"my_ip=203.0.113.1/32"</span>
+
+<span class="cm"># Применение (с подтверждением)</span>
+<span class="fn">terraform</span> apply <span class="fl">-var</span> <span class="st">"my_ip=203.0.113.1/32"</span>
+
+<span class="cm"># Проверка результата</span>
+<span class="fn">terraform</span> output
+<span class="fn">curl</span> $(terraform output <span class="fl">-raw</span> web_url)
+
+<span class="cm"># Очистка — удаление всех ресурсов</span>
+<span class="fn">terraform</span> destroy <span class="fl">-var</span> <span class="st">"my_ip=203.0.113.1/32"</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="note">
+                    <strong>Результат:</strong> вы развернули полноценную сетевую инфраструктуру с VPC, подсетью, Internet Gateway, Security Group и EC2-инстансом с веб-сервером Apache &mdash; всё из кода, который можно версионировать в Git и применять повторно. Для production-окружения следующим шагом будет добавление удалённого бэкенда для state, модуляризация кода и настройка CI/CD пайплайна.
+                </div>
+            </div>
+
+            <!-- ===== ПРАКТИКА ===== -->
+            <div class="practice">
+                <h3>Практические задания</h3>
+                <ol>
+                    <li>Установите Terraform, выполните <code>terraform init</code> в пустой директории с провайдером AWS (или любым другим). Проверьте, что в <code>.terraform/</code> появились файлы провайдера и сгенерирован <code>.terraform.lock.hcl</code>.</li>
+                    <li>Создайте модуль для S3-бакета с переменными <code>bucket_name</code> и <code>environment</code>, который включает версионирование и шифрование. Вызовите модуль из корневой конфигурации дважды &mdash; для dev и prod &mdash; с разными именами.</li>
+                    <li>Напишите конфигурацию с <code>for_each</code>, которая создаёт три Security Group из map переменных (web, api, db), каждую со своим набором портов. Используйте dynamic block для генерации правил ingress.</li>
+                    <li>Настройте удалённый бэкенд S3 + DynamoDB для state. Создайте два workspace (dev и prod), примените конфигурацию в каждом и убедитесь, что ресурсы изолированы.</li>
+                    <li>Возьмите туториал из этого раздела, добавьте к нему Application Load Balancer и Auto Scaling Group. Настройте <code>terraform.tfvars</code> для двух окружений с разным количеством инстансов (dev: 1, prod: 3).</li>
+                </ol>
+            </div>
+
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div class="resources">
+                <h3>Ресурсы для изучения</h3>
+                <ul>
+                    <li>
+                        <a href="https://developer.hashicorp.com/terraform/tutorials" target="_blank">HashiCorp Terraform Tutorials</a>
+                        <div class="res-desc">Официальные пошаговые туториалы от HashiCorp &mdash; лучшая отправная точка для изучения Terraform</div>
+                    </li>
+                    <li>
+                        <a href="https://registry.terraform.io/" target="_blank">Terraform Registry</a>
+                        <div class="res-desc">Каталог провайдеров и модулей &mdash; документация по всем ресурсам всех провайдеров</div>
+                    </li>
+                    <li>
+                        <a href="https://developer.hashicorp.com/terraform/language" target="_blank">HCL Language Documentation</a>
+                        <div class="res-desc">Полная спецификация языка HCL: синтаксис, функции, выражения, мета-аргументы</div>
+                    </li>
+                    <li>
+                        <a href="https://opentofu.org/docs/" target="_blank">OpenTofu Documentation</a>
+                        <div class="res-desc">Документация OpenTofu &mdash; открытого форка Terraform под лицензией MPL 2.0</div>
+                    </li>
+                    <li>
+                        <a href="https://github.com/antonbabenko/terraform-best-practices" target="_blank">Terraform Best Practices</a>
+                        <div class="res-desc">Собрание лучших практик от Anton Babenko &mdash; автора популярных модулей Terraform</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ===== MARK COMPLETE ===== -->
+            <label class="mark-complete">
+                <input type="checkbox" id="topicCheckbox" data-topic="terraform">
+                <span>Отметить тему как изученную</span>
+            </label>
+
+            <!-- ===== BOTTOM NAV ===== -->
+            <div class="bottom-nav">
+                <div class="prev">
+                    <div class="nav-label">Назад</div>
+                    <a href="ansible.html" class="nav-title">&larr; Ansible</a>
+                </div>
+                <div class="next">
+                    <div class="nav-label">Далее</div>
+                    <a href="kubernetes.html" class="nav-title">Kubernetes &rarr;</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script src="../app.js"></script>
+</body>
+</html>
+</html>
